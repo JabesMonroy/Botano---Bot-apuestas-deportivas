@@ -4,6 +4,8 @@ import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
+
 from src.modelo.dixon_coles import Ajustes, ParametrosModelo, lambdas, matriz_marcadores, mercados
 from src.modelo.fuerzas import cargar as cargar_fuerzas
 from src.modelo.fuerzas import lambdas_desde_fuerzas
@@ -30,6 +32,7 @@ class Analisis:
     cuotas: dict
     fiable: bool
     divergencia: float
+    matriz: np.ndarray
 
 
 def analizar_1x2(conn: sqlite3.Connection, data_dir: Path, local: str, visita: str) -> Analisis | None:
@@ -54,7 +57,8 @@ def analizar_1x2(conn: sqlite3.Connection, data_dir: Path, local: str, visita: s
         lh, la = lambdas(eq[local]["elo"], eq[visita]["elo"], par, aj)
         delta, w_mercado, metodo = 0.0, 0.5, "elo"
 
-    prob = mercados(matriz_marcadores(lh, la, par))
+    matriz = matriz_marcadores(lh, la, par)
+    prob = mercados(matriz)
     p1, px, p2 = corregir_empate(prob["1"], prob["X"], prob["2"], delta)
     modelo = {"1": p1, "X": px, "2": p2}
 
@@ -79,7 +83,7 @@ def analizar_1x2(conn: sqlite3.Connection, data_dir: Path, local: str, visita: s
 
     return Analisis(
         local, visita, eq[local]["nombre"], eq[visita]["nombre"], metodo, lh, la,
-        prob, modelo, novig, trabajo, cuotas, fiable, divergencia,
+        prob, modelo, novig, trabajo, cuotas, fiable, divergencia, matriz,
     )
 
 
