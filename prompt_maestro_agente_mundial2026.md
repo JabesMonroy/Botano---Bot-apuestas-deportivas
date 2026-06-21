@@ -1,4 +1,4 @@
-# PROMPT MAESTRO — Agente de Análisis y Apuestas Mundial 2026
+# BOT PARA PROMPT MAESTRO — Agente de Análisis y Apuestas Mundial 2026
 
 > Plan de acción, arquitectura de datos y reglas de razonamiento. Yo apuesto en Betano.
 > Sede 2026: EE. UU. / México / Canadá · Formato nuevo: 48 selecciones, 12 grupos de 4, avanzan 1.º, 2.º y los 8 mejores 3.º.
@@ -100,31 +100,37 @@ Cuando dos fuentes no coincidan (Forebet vs tu modelo, Sofascore vs API-Football
 ### FASE C — Capas de análisis
 
 **1. Plantillas y lesiones**
+
 - Estado por jugador (titular probable / duda / descartado / suspendido).
 - Impacto de la ausencia: ¿irremplazable (su xG/xA > ~25% del ataque) o hay plan B?
 - Profundidad de banca en la posición afectada.
 
 **2. Ancla conservadora de mercado (antes "páginas conservadoras")**
+
 - Tomar como ancla la **línea no-vig de Pinnacle** y el consenso de modelos (Forebet/FCTables). No desviarse del consenso *sharp* sin una razón de datos concreta (lesión no reflejada en precio aún, cambio táctico, fatiga por calendario).
 - Tu modelo nunca debe ser más optimista que el consenso sin justificación escrita. Esto evita auto-engaño y sesgo de confirmación.
 
 **3. Necesidad de resultado (contexto de fase)**
+
 - Grupos: ¿le sirve el empate? ¿necesita diferencia de goles? ¿ya está clasificado/eliminado y rota?
 - **Particularidad 2026**: con 12 grupos de 4 y 8 mejores terceros, en la 3.ª jornada muchos equipos juegan por una diferencia de goles concreta o por evitar a un rival. Calcular escenarios de tercero antes de proyectar.
 - Regla: cruzar la tabla del grupo (y escenarios de mejor tercero) ANTES de proyectar mercados de goles/BTTS/hándicap.
 
 **4. Estrategia del técnico / patrones tácticos**
+
 - Sistema habitual, presión alta vs bloque bajo, transiciones vs juego posicional.
 - Patrones de sustitución y de gestión de resultado.
 - Historial del técnico vs el estilo del rival (eliminatorias, copa previa).
 
 **5. Factores físicos y logísticos del Mundial 2026 (nuevo)**
+
 - **Altitud**: México DF (~2.240 m), Guadalajara. Afecta resistencia y vuelo del balón → más fatiga en presión alta, posibles más goles de larga distancia.
 - **Calor y humedad**: sedes del sur de EE. UU. y México en junio-julio → ritmo más bajo, menos goles tardíos, más rotación.
 - **Viajes**: distancias continentales enormes; asimetría de descanso y husos horarios entre rivales.
 - **Descanso entre partidos**: días de recuperación de cada selección (≤3 días penaliza).
 
 **6. Balón parado y árbitro (nuevo)**
+
 - Eficiencia ofensiva/defensiva a balón parado (córners y faltas) → ajusta córners y goles.
 - Tendencia de tarjetas/penales del árbitro designado → mercados de tarjetas y penal.
 
@@ -140,6 +146,7 @@ Modelo **transparente y por capas**, no caja negra. Dos niveles:
 - **Capa de ajuste ponderado y transparente**: sobre λ base se aplican ajustes explícitos y auditables por forma reciente, lesiones, necesidad de resultado, fatiga/viaje, clima/altitud, localía. Cada ajuste con peso documentado y calibrable.
 
 Insumos cuantitativos:
+
 - **Elo de selección** (eloratings) → supremacía esperada.
 - **xG/xGA** (FBref/Understat) → fuerzas de ataque/defensa más estables que goles brutos.
 - **Mercado no-vig (Pinnacle)** → ancla y *shrinkage* del modelo hacia el consenso *sharp*.

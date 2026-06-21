@@ -18,6 +18,9 @@ class ApiFootball:
     def status(self) -> dict[str, Any]:
         return self._client.get("/status", ttl=0)
 
+    def teams(self, **params: Any) -> dict[str, Any]:
+        return self._client.get("/teams", params=params)
+
     def fixtures(self, **params: Any) -> dict[str, Any]:
         return self._client.get("/fixtures", params=params)
 
