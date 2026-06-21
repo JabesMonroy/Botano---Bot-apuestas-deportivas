@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS equipos (
     football_data_id INTEGER UNIQUE,
     football_data_name TEXT,
     elo REAL,
+    valor_plantilla REAL,
     fuerza_ataque REAL,
     fuerza_defensa REAL,
     estilo TEXT,
