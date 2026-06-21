@@ -62,7 +62,8 @@ class CachedClient:
             except httpx.HTTPStatusError as exc:
                 last_exc = exc
                 if exc.response.status_code == 429 and attempt < self._max_retries - 1:
-                    time.sleep(2 ** attempt)
+                    espera = float(exc.response.headers.get("Retry-After", 2 ** attempt))
+                    time.sleep(max(espera, 6.5))
                     continue
                 raise
             except httpx.HTTPError as exc:

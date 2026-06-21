@@ -101,6 +101,22 @@ CREATE TABLE IF NOT EXISTS apuestas (
     fecha TEXT
 );
 
+CREATE TABLE IF NOT EXISTS historico (
+    api_fixture_id INTEGER PRIMARY KEY,
+    fecha TEXT,
+    liga TEXT,
+    liga_id INTEGER,
+    season INTEGER,
+    home_api_id INTEGER,
+    home_name TEXT,
+    away_api_id INTEGER,
+    away_name TEXT,
+    goles_home INTEGER,
+    goles_away INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_historico_fecha ON historico(fecha);
+
 CREATE TABLE IF NOT EXISTS standings (
     id INTEGER PRIMARY KEY,
     grupo TEXT,

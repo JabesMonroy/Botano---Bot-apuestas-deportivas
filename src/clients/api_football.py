@@ -12,7 +12,7 @@ class ApiFootball:
             base_url=f"https://{host}",
             headers={"x-apisports-key": api_key},
             cache_dir=cache_dir,
-            min_interval=1.0,
+            min_interval=6.5,
         )
 
     def status(self) -> dict[str, Any]:
