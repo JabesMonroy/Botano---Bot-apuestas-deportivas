@@ -145,7 +145,15 @@ Cuando dos fuentes no coincidan (Forebet vs tu modelo, Sofascore vs API-Football
 Modelo **transparente y por capas**, no caja negra. Dos niveles:
 
 - **Capa estadística base — goles**: **Dixon-Coles** (Poisson bivariado con corrección de marcadores bajos 0-0/1-0/0-1/1-1 y dependencia). Estima goles esperados de cada equipo (λ_local, λ_visita) a partir de fuerzas de ataque/defensa (derivadas de xG y resultados), Elo de selección y ventaja contextual. De la **matriz de marcadores** se derivan de forma **consistente**: 1X2, Over/Under, BTTS, hándicap, marcador exacto.
-- **Capa de ajuste ponderado y transparente**: sobre λ base se aplican ajustes explícitos y auditables por forma reciente, lesiones, necesidad de resultado, fatiga/viaje, clima/altitud, localía. Cada ajuste con peso documentado y calibrable.
+- **Capa de ajuste ponderado (factores prospectivos)**: sobre λ base se aplican multiplicadores de ataque/defensa por equipo que capturan lo que el Elo (pasado) NO ve. Cada factor entra como multiplicador (default 1.0) y se activa al disponer del dato:
+  - **Plantilla / lesiones / suspensiones**: impacto de ausencias de jugadores clave, ponderado por su xG/xA y minutos. Fuente: Sofascore, API-Football `injuries`, prensa.
+  - **Forma de los jugadores ("cómo vienen")**: xG/xA recientes en club y selección. Fuente: FBref/Understat.
+  - **Estilo del técnico**: presión alta vs bloque bajo, ritmo, agresividad → goles y tarjetas. Fuente: Sofascore/WhoScored.
+  - **Formación / apertura de campo / modo de ataque**: 4-3-3 vs 3-5-2, amplitud por bandas, transiciones vs juego posicional → córners y reparto de goles. Fuente: alineaciones y heatmaps de Sofascore.
+  - **Descanso/viaje, clima/altitud, necesidad de resultado, localía (anfitrión)**.
+
+  Cada multiplicador con peso documentado y calibrable. **Estado actual**: el núcleo corre con Elo + localía; los multiplicadores están cableados en 1.0, pendientes del scraper de Sofascore/FBref.
+- **Anclaje y calibración**: el núcleo Elo puro sobreestima a los favoritos (validado: ARG modelo 73.9% vs Pinnacle no-vig 61.8%). Por tanto se calibra `beta_elo` y un *shrinkage* hacia la línea no-vig de Pinnacle (casa más afilada); las desviaciones respecto al mercado solo se consideran *valor* cuando provienen de la capa de ajustes con dato real, no del Elo crudo.
 
 Insumos cuantitativos:
 
