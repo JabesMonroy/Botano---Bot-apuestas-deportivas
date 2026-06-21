@@ -26,8 +26,9 @@ def main(local: str, visita: str) -> int:
     fuerzas = cargar_fuerzas(cfg.data_dir)
     res = None
     if fuerzas and eq[local]["api_football_id"] and eq[visita]["api_football_id"]:
+        ventaja = fuerzas["gamma"] if local in HOSTS else 0.0
         res = lambdas_desde_fuerzas(
-            eq[local]["api_football_id"], eq[visita]["api_football_id"], fuerzas, aj, es_host=local in HOSTS
+            eq[local]["api_football_id"], eq[visita]["api_football_id"], fuerzas, aj, ventaja_local=ventaja
         )
     if res is not None:
         metodo = "fuerzas (Dixon-Coles historico)"

@@ -26,32 +26,40 @@ def _parse(iso: str | None) -> datetime | None:
         return None
 
 
-def cargar_partidos(conn: sqlite3.Connection, min_partidos: int = 5):
-    rows = conn.execute(
+def _filas_historico(conn: sqlite3.Connection):
+    return conn.execute(
         "SELECT fecha, home_api_id h, away_api_id a, goles_home gh, goles_away ga FROM historico "
         "WHERE home_api_id IS NOT NULL AND away_api_id IS NOT NULL "
         "AND goles_home IS NOT NULL AND goles_away IS NOT NULL"
     ).fetchall()
+
+
+def construir_dataset(filas, min_partidos: int = 5, ref: datetime | None = None):
     cnt: Counter = Counter()
-    for r in rows:
+    for r in filas:
         cnt[r["h"]] += 1
         cnt[r["a"]] += 1
     validos = {t for t, c in cnt.items() if c >= min_partidos}
-    rows = [r for r in rows if r["h"] in validos and r["a"] in validos]
+    filas = [r for r in filas if r["h"] in validos and r["a"] in validos]
 
-    equipos = sorted({r["h"] for r in rows} | {r["a"] for r in rows})
+    equipos = sorted({r["h"] for r in filas} | {r["a"] for r in filas})
     idx = {t: i for i, t in enumerate(equipos)}
-    fechas = [_parse(r["fecha"]) for r in rows]
-    ref = max(f for f in fechas if f)
+    fechas = [_parse(r["fecha"]) for r in filas]
+    if ref is None:
+        ref = max(f for f in fechas if f)
     xi = math.log(2) / HALF_LIFE
 
-    h = np.array([idx[r["h"]] for r in rows])
-    a = np.array([idx[r["a"]] for r in rows])
-    gh = np.array([r["gh"] for r in rows], dtype=float)
-    ga = np.array([r["ga"] for r in rows], dtype=float)
+    h = np.array([idx[r["h"]] for r in filas])
+    a = np.array([idx[r["a"]] for r in filas])
+    gh = np.array([r["gh"] for r in filas], dtype=float)
+    ga = np.array([r["ga"] for r in filas], dtype=float)
     dt = np.array([(ref - f).days / 365.25 if f else 5.0 for f in fechas])
     w = np.exp(-xi * dt)
     return equipos, h, a, gh, ga, w, ref
+
+
+def cargar_partidos(conn: sqlite3.Connection, min_partidos: int = 5):
+    return construir_dataset(_filas_historico(conn), min_partidos)
 
 
 def ajustar(equipos: list[int], h, a, gh, ga, w, reg: float = 0.01) -> dict:
@@ -107,13 +115,12 @@ def cargar(data_dir: Path) -> dict | None:
     return json.loads(ruta.read_text(encoding="utf-8")) if ruta.exists() else None
 
 
-def lambdas_desde_fuerzas(api_h: int, api_a: int, f: dict, aj: Ajustes, es_host: bool = False):
+def lambdas_desde_fuerzas(api_h: int, api_a: int, f: dict, aj: Ajustes, ventaja_local: float = 0.0):
     fz = f["fuerzas"]
     kh, ka = str(api_h), str(api_a)
     if kh not in fz or ka not in fz:
         return None
-    ventaja = f["gamma"] if es_host else 0.0
-    loglh = f["mu"] + ventaja + fz[kh]["ataque"] - fz[ka]["defensa"]
+    loglh = f["mu"] + ventaja_local + fz[kh]["ataque"] - fz[ka]["defensa"]
     logla = f["mu"] + fz[ka]["ataque"] - fz[kh]["defensa"]
     lh = math.exp(loglh) * aj.ataque_local * aj.defensa_visita
     la = math.exp(logla) * aj.ataque_visita * aj.defensa_local
