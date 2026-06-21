@@ -48,6 +48,7 @@ Panorama real de fuentes (priorizando gratuitas). No asumas más acceso del que 
 - **Understat** — xG/xGA por partido y por jugador (ligas top). Para forma subyacente del jugador.
 - **Forebet** — predicciones de modelo propio (1X2, marcador, over/under). **Segunda opinión de modelo.**
 - **FCTables / Soccerway** — históricos, forma reciente, promedios de goles/córners/tarjetas.
+- **Redscore** — live scores, H2H y predicciones/estadísticas por mercado. *A evaluar* su estructura y fiabilidad antes de integrar; potencial contraste de córners/tarjetas y momentum.
 - **football-data.co.uk** — CSV históricos de resultados y cuotas de cierre. Para **backtesting** y calibración del modelo.
 - **Transfermarkt** — valor de plantilla y de jugador (proxy de calidad), edad, minutos, estado de lesión.
 - **eloratings / referees** y **Sofascore (árbitro)** — tendencias del árbitro (tarjetas/penales por partido), relevante para mercados de tarjetas.
