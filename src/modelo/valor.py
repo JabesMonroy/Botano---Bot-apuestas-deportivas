@@ -9,3 +9,16 @@ def sin_vig(cuotas: dict[str, float]) -> dict[str, float]:
 
 def ev(prob: float, cuota: float) -> float:
     return prob * (cuota - 1.0) - (1.0 - prob)
+
+
+def corregir_empate(p1: float, px: float, p2: float, delta: float) -> tuple[float, float, float]:
+    nx = max(px - delta, 1e-6)
+    quitado = px - nx
+    s = p1 + p2
+    if s <= 0:
+        return p1, nx, p2
+    return p1 + quitado * p1 / s, nx, p2 + quitado * p2 / s
+
+
+def mezclar_1x2(modelo: dict[str, float], mercado: dict[str, float], w_mercado: float) -> dict[str, float]:
+    return {k: (1.0 - w_mercado) * modelo[k] + w_mercado * mercado[k] for k in ("1", "X", "2")}
