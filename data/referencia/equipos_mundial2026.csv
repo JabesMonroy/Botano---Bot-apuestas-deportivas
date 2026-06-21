@@ -1,49 +1,49 @@
 fifa_code,nombre,confederacion,api_football_id,sofascore_id,fbref_id,eloratings_name,odds_api_name,football_data_id,football_data_name
-AUS,Australia,AFC,,,,,Australia,779,Australia
-IRN,Irán,AFC,,,,,Iran,840,Iran
-IRQ,Irak,AFC,,,,,Iraq,8062,Iraq
-JOR,Jordania,AFC,,,,,Jordan,8049,Jordan
-JPN,Japón,AFC,,,,,Japan,766,Japan
-KOR,Corea del Sur,AFC,,,,,South Korea,772,South Korea
-KSA,Arabia Saudita,AFC,,,,,Saudi Arabia,801,Saudi Arabia
-QAT,Catar,AFC,,,,,Qatar,8030,Qatar
-UZB,Uzbekistán,AFC,,,,,Uzbekistan,8070,Uzbekistan
-ALG,Argelia,CAF,,,,,Algeria,778,Algeria
-CIV,Costa de Marfil,CAF,,,,,Ivory Coast,1935,Ivory Coast
-COD,RD Congo,CAF,,,,,DR Congo,1934,Congo DR
-CPV,Cabo Verde,CAF,,,,,Cape Verde,1930,Cape Verde Islands
-EGY,Egipto,CAF,,,,,Egypt,825,Egypt
-GHA,Ghana,CAF,,,,,Ghana,763,Ghana
-MAR,Marruecos,CAF,,,,,Morocco,815,Morocco
-RSA,Sudáfrica,CAF,,,,,South Africa,774,South Africa
-SEN,Senegal,CAF,,,,,Senegal,804,Senegal
-TUN,Túnez,CAF,,,,,Tunisia,802,Tunisia
-CAN,Canadá,CONCACAF,,,,,Canada,828,Canada
-CUW,Curazao,CONCACAF,,,,,Curaçao,9460,Curaçao
-HAI,Haití,CONCACAF,,,,,Haiti,836,Haiti
-MEX,México,CONCACAF,,,,,Mexico,769,Mexico
-PAN,Panamá,CONCACAF,,,,,Panama,1836,Panama
-USA,Estados Unidos,CONCACAF,,,,,USA,771,United States
-ARG,Argentina,CONMEBOL,,,,,Argentina,762,Argentina
-BRA,Brasil,CONMEBOL,,,,,Brazil,764,Brazil
-COL,Colombia,CONMEBOL,,,,,Colombia,818,Colombia
-ECU,Ecuador,CONMEBOL,,,,,Ecuador,791,Ecuador
-PAR,Paraguay,CONMEBOL,,,,,Paraguay,761,Paraguay
-URU,Uruguay,CONMEBOL,,,,,Uruguay,758,Uruguay
-NZL,Nueva Zelanda,OFC,,,,,New Zealand,783,New Zealand
-AUT,Austria,UEFA,,,,,Austria,816,Austria
-BEL,Bélgica,UEFA,,,,,Belgium,805,Belgium
-BIH,Bosnia y Herzegovina,UEFA,,,,,Bosnia & Herzegovina,1060,Bosnia-Herzegovina
-CRO,Croacia,UEFA,,,,,Croatia,799,Croatia
-CZE,República Checa,UEFA,,,,,Czech Republic,798,Czechia
-ENG,Inglaterra,UEFA,,,,,England,770,England
-ESP,España,UEFA,,,,,Spain,760,Spain
-FRA,Francia,UEFA,,,,,France,773,France
-GER,Alemania,UEFA,,,,,Germany,759,Germany
-NED,Países Bajos,UEFA,,,,,Netherlands,8601,Netherlands
-NOR,Noruega,UEFA,,,,,Norway,8872,Norway
-POR,Portugal,UEFA,,,,,Portugal,765,Portugal
-SCO,Escocia,UEFA,,,,,Scotland,8873,Scotland
-SUI,Suiza,UEFA,,,,,Switzerland,788,Switzerland
-SWE,Suecia,UEFA,,,,,Sweden,792,Sweden
-TUR,Turquía,UEFA,,,,,Turkey,803,Turkey
+AUS,Australia,AFC,,,,Australia,Australia,779,Australia
+IRN,Irán,AFC,,,,Iran,Iran,840,Iran
+IRQ,Irak,AFC,,,,Iraq,Iraq,8062,Iraq
+JOR,Jordania,AFC,,,,Jordan,Jordan,8049,Jordan
+JPN,Japón,AFC,,,,Japan,Japan,766,Japan
+KOR,Corea del Sur,AFC,,,,South Korea,South Korea,772,South Korea
+KSA,Arabia Saudita,AFC,,,,Saudi Arabia,Saudi Arabia,801,Saudi Arabia
+QAT,Catar,AFC,,,,Qatar,Qatar,8030,Qatar
+UZB,Uzbekistán,AFC,,,,Uzbekistan,Uzbekistan,8070,Uzbekistan
+ALG,Argelia,CAF,,,,Algeria,Algeria,778,Algeria
+CIV,Costa de Marfil,CAF,,,,Ivory Coast,Ivory Coast,1935,Ivory Coast
+COD,RD Congo,CAF,,,,DR Congo,DR Congo,1934,Congo DR
+CPV,Cabo Verde,CAF,,,,Cape Verde,Cape Verde,1930,Cape Verde Islands
+EGY,Egipto,CAF,,,,Egypt,Egypt,825,Egypt
+GHA,Ghana,CAF,,,,Ghana,Ghana,763,Ghana
+MAR,Marruecos,CAF,,,,Morocco,Morocco,815,Morocco
+RSA,Sudáfrica,CAF,,,,South Africa,South Africa,774,South Africa
+SEN,Senegal,CAF,,,,Senegal,Senegal,804,Senegal
+TUN,Túnez,CAF,,,,Tunisia,Tunisia,802,Tunisia
+CAN,Canadá,CONCACAF,,,,Canada,Canada,828,Canada
+CUW,Curazao,CONCACAF,,,,Curaçao,Curaçao,9460,Curaçao
+HAI,Haití,CONCACAF,,,,Haiti,Haiti,836,Haiti
+MEX,México,CONCACAF,,,,Mexico,Mexico,769,Mexico
+PAN,Panamá,CONCACAF,,,,Panama,Panama,1836,Panama
+USA,Estados Unidos,CONCACAF,,,,United States,USA,771,United States
+ARG,Argentina,CONMEBOL,,,,Argentina,Argentina,762,Argentina
+BRA,Brasil,CONMEBOL,,,,Brazil,Brazil,764,Brazil
+COL,Colombia,CONMEBOL,,,,Colombia,Colombia,818,Colombia
+ECU,Ecuador,CONMEBOL,,,,Ecuador,Ecuador,791,Ecuador
+PAR,Paraguay,CONMEBOL,,,,Paraguay,Paraguay,761,Paraguay
+URU,Uruguay,CONMEBOL,,,,Uruguay,Uruguay,758,Uruguay
+NZL,Nueva Zelanda,OFC,,,,New Zealand,New Zealand,783,New Zealand
+AUT,Austria,UEFA,,,,Austria,Austria,816,Austria
+BEL,Bélgica,UEFA,,,,Belgium,Belgium,805,Belgium
+BIH,Bosnia y Herzegovina,UEFA,,,,Bosnia and Herzegovina,Bosnia & Herzegovina,1060,Bosnia-Herzegovina
+CRO,Croacia,UEFA,,,,Croatia,Croatia,799,Croatia
+CZE,República Checa,UEFA,,,,Czechia,Czech Republic,798,Czechia
+ENG,Inglaterra,UEFA,,,,England,England,770,England
+ESP,España,UEFA,,,,Spain,Spain,760,Spain
+FRA,Francia,UEFA,,,,France,France,773,France
+GER,Alemania,UEFA,,,,Germany,Germany,759,Germany
+NED,Países Bajos,UEFA,,,,Netherlands,Netherlands,8601,Netherlands
+NOR,Noruega,UEFA,,,,Norway,Norway,8872,Norway
+POR,Portugal,UEFA,,,,Portugal,Portugal,765,Portugal
+SCO,Escocia,UEFA,,,,Scotland,Scotland,8873,Scotland
+SUI,Suiza,UEFA,,,,Switzerland,Switzerland,788,Switzerland
+SWE,Suecia,UEFA,,,,Sweden,Sweden,792,Sweden
+TUR,Turquía,UEFA,,,,Turkey,Turkey,803,Turkey
