@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS equipos (
     fbref_id TEXT,
     eloratings_name TEXT,
     odds_api_name TEXT,
+    football_data_id INTEGER UNIQUE,
+    football_data_name TEXT,
     elo REAL,
     fuerza_ataque REAL,
     fuerza_defensa REAL,

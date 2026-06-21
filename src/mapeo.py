@@ -15,6 +15,8 @@ COLUMNAS = [
     "fbref_id",
     "eloratings_name",
     "odds_api_name",
+    "football_data_id",
+    "football_data_name",
 ]
 
 FUENTES = {
@@ -25,6 +27,8 @@ FUENTES = {
     "fbref_id",
     "eloratings_name",
     "odds_api_name",
+    "football_data_id",
+    "football_data_name",
 }
 
 
@@ -38,6 +42,8 @@ class EquipoMapeo:
     fbref_id: str = ""
     eloratings_name: str = ""
     odds_api_name: str = ""
+    football_data_id: int | None = None
+    football_data_name: str = ""
 
 
 def _to_int(valor: str) -> int | None:
@@ -58,6 +64,8 @@ def cargar_csv(path: Path) -> list[EquipoMapeo]:
             fbref_id=fila.get("fbref_id", "").strip(),
             eloratings_name=fila.get("eloratings_name", "").strip(),
             odds_api_name=fila.get("odds_api_name", "").strip(),
+            football_data_id=_to_int(fila.get("football_data_id", "")),
+            football_data_name=fila.get("football_data_name", "").strip(),
         )
         for fila in filas
     ]
@@ -80,6 +88,8 @@ def guardar_csv(path: Path, equipos: list[EquipoMapeo]) -> None:
                     "fbref_id": e.fbref_id,
                     "eloratings_name": e.eloratings_name,
                     "odds_api_name": e.odds_api_name,
+                    "football_data_id": e.football_data_id or "",
+                    "football_data_name": e.football_data_name,
                 }
             )
 
@@ -89,8 +99,9 @@ def upsert_db(conn: sqlite3.Connection, equipos: list[EquipoMapeo]) -> int:
     sql = """
         INSERT INTO equipos (
             fifa_code, nombre, confederacion, api_football_id,
-            sofascore_id, fbref_id, eloratings_name, odds_api_name, actualizado
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            sofascore_id, fbref_id, eloratings_name, odds_api_name,
+            football_data_id, football_data_name, actualizado
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(fifa_code) DO UPDATE SET
             nombre = excluded.nombre,
             confederacion = excluded.confederacion,
@@ -99,6 +110,8 @@ def upsert_db(conn: sqlite3.Connection, equipos: list[EquipoMapeo]) -> int:
             fbref_id = CASE WHEN excluded.fbref_id != '' THEN excluded.fbref_id ELSE equipos.fbref_id END,
             eloratings_name = CASE WHEN excluded.eloratings_name != '' THEN excluded.eloratings_name ELSE equipos.eloratings_name END,
             odds_api_name = CASE WHEN excluded.odds_api_name != '' THEN excluded.odds_api_name ELSE equipos.odds_api_name END,
+            football_data_id = COALESCE(excluded.football_data_id, equipos.football_data_id),
+            football_data_name = CASE WHEN excluded.football_data_name != '' THEN excluded.football_data_name ELSE equipos.football_data_name END,
             actualizado = excluded.actualizado
     """
     with conn:
@@ -114,6 +127,8 @@ def upsert_db(conn: sqlite3.Connection, equipos: list[EquipoMapeo]) -> int:
                     e.fbref_id,
                     e.eloratings_name,
                     e.odds_api_name,
+                    e.football_data_id,
+                    e.football_data_name,
                     ahora,
                 )
                 for e in equipos
