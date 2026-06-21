@@ -182,9 +182,10 @@ Insumos cuantitativos:
 - Calcular la **probabilidad conjunta real** simulando sobre la matriz de marcadores / **Monte Carlo** del partido, no multiplicando.
 - Marcar correlaciones típicas: Over 2.5 + BTTS (positiva), equipo gana + Under (a menudo negativa), gana favorito + ambos anotan (depende). Indicar si Betano ya descuenta la correlación en la cuota combinada.
 
-### 3.5 Mercados de torneo (futuros)
+### 3.5 Mercados de torneo (futuros) — implementado
 
-- **Simulación Monte Carlo** del cuadro completo (grupos → eliminatorias) para clasificación, llegar a fase X y campeón. Reusar λ del modelo de partido. Comparar contra cuotas de futuros para detectar valor.
+- **Simulación Monte Carlo** del cuadro completo (grupos con desempates → eliminatorias) para `P(avanza)`, `P(final)` y `P(campeón)`. El cuadro de eliminatorias se modela como **sorteo aleatorio** entre los 32 (aproximación documentada; la asignación oficial de los 8 mejores terceros queda pendiente).
+- **Hallazgo (sesgo amplificado)**: `P(avanza)` es robusta, pero `P(campeón)` del modelo crudo **amplifica los sesgos** (no capta calidad de plantilla): sobrevalora a CONMEBOL (COL +21pp, ARG +15pp vs mercado) e **infravalora a Francia** (−16pp). Para outrights, **deferir al mercado**; las grandes divergencias son fallos del modelo, no valor (mismo principio que el guardarraíl de partido).
 
 ### 3.6 Modelado de mercados secundarios (córners y tarjetas)
 

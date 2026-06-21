@@ -27,17 +27,15 @@ class OddsApi:
         bookmakers: str = "pinnacle",
         ttl: float = 300,
     ) -> list[dict[str, Any]]:
-        return self._client.get(
-            f"/v4/sports/{sport}/odds",
-            params={
-                "apiKey": self._key,
-                "regions": regions,
-                "markets": markets,
-                "bookmakers": bookmakers,
-                "oddsFormat": "decimal",
-            },
-            ttl=ttl,
-        )
+        params = {
+            "apiKey": self._key,
+            "regions": regions,
+            "markets": markets,
+            "oddsFormat": "decimal",
+        }
+        if bookmakers:
+            params["bookmakers"] = bookmakers
+        return self._client.get(f"/v4/sports/{sport}/odds", params=params, ttl=ttl)
 
     def close(self) -> None:
         self._client.close()
