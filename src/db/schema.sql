@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS jugadores (
 CREATE TABLE IF NOT EXISTS partidos (
     id INTEGER PRIMARY KEY,
     api_football_id INTEGER UNIQUE,
+    football_data_id INTEGER UNIQUE,
     fecha TEXT,
     equipo_local_id INTEGER REFERENCES equipos(id),
     equipo_visita_id INTEGER REFERENCES equipos(id),
