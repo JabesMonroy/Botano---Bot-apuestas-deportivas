@@ -1,0 +1,8 @@
+{
+  "beta_elo": 0.16062224357197588,
+  "rho": -0.08,
+  "ventaja_local_elo": 80.0,
+  "tasa_base_calibracion": 1.527,
+  "n_partidos": 35,
+  "cross_entropy": 0.9048
+}
