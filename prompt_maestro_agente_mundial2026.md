@@ -153,7 +153,11 @@ Modelo **transparente y por capas**, no caja negra. Dos niveles:
   - **Descanso/viaje, clima/altitud, necesidad de resultado, localía (anfitrión)**.
 
   Cada multiplicador con peso documentado y calibrable. **Estado actual**: el núcleo corre con Elo + localía; los multiplicadores están cableados en 1.0, pendientes del scraper de Sofascore/FBref.
-- **Anclaje y calibración**: el núcleo Elo puro sobreestima a los favoritos (validado: ARG modelo 73.9% vs Pinnacle no-vig 61.8%). Por tanto se calibra `beta_elo` y un *shrinkage* hacia la línea no-vig de Pinnacle (casa más afilada); las desviaciones respecto al mercado solo se consideran *valor* cuando provienen de la capa de ajustes con dato real, no del Elo crudo.
+- **Núcleo actual (implementado y validado)**: fuerzas ataque/defensa Dixon-Coles estimadas de ~1700 partidos de selección 2022-24 con **ponderación temporal** (vida media 1.5 años) y **ancladas al Elo** (término θ·ΔElo que aporta la escala global entre confederaciones). Sobre la matriz de marcadores se aplica, en orden: **corrección de empate** (anclada a la divergencia con Pinnacle, no a resultados de muestra pequeña), **shrinkage** hacia el no-vig de Pinnacle (w≈0.65) y un **guardarraíl**: si el modelo diverge >18pp del mercado sharp, se marca poco fiable y **no se reporta EV** (es fallo del modelo, no valor).
+- **Sesgos conocidos (documentados, no ocultados)**:
+  1. **Calendario / inter-confederación**: selecciones que dominan confederaciones débiles (Asia, CONCACAF) salen sobrevaloradas en goles; el anclaje Elo lo mitiga pero no lo elimina (ej. BEL-IRN: el modelo da Irán favorito; el guardarraíl lo bloquea).
+  2. **Techo vs mercado**: el modelo cuantitativo no bate a Pinnacle (MAE ~12pp). Su valor real solo aparecerá al sumar los **ajustes prospectivos** de plantilla/forma; sin ellos, la línea de trabajo debe deferir al mercado.
+  3. **RPS agregado engaña**: gran parte de la métrica viene de partidos fáciles; es obligatorio **estratificar por dificultad** (fácil/medio/reñido) y validar **out-of-sample temporal**.
 
 Insumos cuantitativos:
 

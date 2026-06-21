@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import sqlite3
+import unicodedata
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -12,6 +13,7 @@ from scipy.optimize import minimize
 from scipy.special import gammaln
 
 from src.modelo.dixon_coles import Ajustes
+from src.scrapers.eloratings import EloRatings
 
 HALF_LIFE = 1.5
 ARCHIVO = "fuerzas.json"
@@ -26,6 +28,10 @@ def _parse(iso: str | None) -> datetime | None:
         return None
 
 
+def _norm(t: str) -> str:
+    return unicodedata.normalize("NFKD", t or "").encode("ascii", "ignore").decode().strip().lower()
+
+
 def _filas_historico(conn: sqlite3.Connection):
     return conn.execute(
         "SELECT fecha, home_api_id h, away_api_id a, goles_home gh, goles_away ga FROM historico "
@@ -34,7 +40,21 @@ def _filas_historico(conn: sqlite3.Connection):
     ).fetchall()
 
 
-def construir_dataset(filas, min_partidos: int = 5, ref: datetime | None = None):
+def mapa_elo(conn: sqlite3.Connection, cache_dir: Path) -> dict[int, float]:
+    idx: dict[str, float] = {}
+    for _code, nombre, elo, alias in EloRatings(cache_dir / "eloratings").ratings():
+        for n in (nombre, *alias):
+            idx.setdefault(_norm(n), float(elo))
+    api_nombre: dict[int, str] = {}
+    for r in conn.execute(
+        "SELECT home_api_id id, home_name n FROM historico WHERE home_api_id IS NOT NULL "
+        "UNION SELECT away_api_id, away_name FROM historico WHERE away_api_id IS NOT NULL"
+    ):
+        api_nombre[r["id"]] = r["n"]
+    return {api_id: idx[_norm(n)] for api_id, n in api_nombre.items() if _norm(n) in idx}
+
+
+def construir_dataset(filas, elo_por_api: dict[int, float], min_partidos: int = 5, ref: datetime | None = None):
     cnt: Counter = Counter()
     for r in filas:
         cnt[r["h"]] += 1
@@ -55,26 +75,33 @@ def construir_dataset(filas, min_partidos: int = 5, ref: datetime | None = None)
     ga = np.array([r["ga"] for r in filas], dtype=float)
     dt = np.array([(ref - f).days / 365.25 if f else 5.0 for f in fechas])
     w = np.exp(-xi * dt)
-    return equipos, h, a, gh, ga, w, ref
+
+    elos = [elo_por_api.get(t) for t in equipos]
+    presentes = [e for e in elos if e is not None]
+    media = sum(presentes) / len(presentes) if presentes else 1500.0
+    elo_norm = np.array([((e if e is not None else media) - media) / 100.0 for e in elos])
+    return equipos, h, a, gh, ga, w, elo_norm, ref
 
 
-def cargar_partidos(conn: sqlite3.Connection, min_partidos: int = 5):
-    return construir_dataset(_filas_historico(conn), min_partidos)
+def cargar_partidos(conn: sqlite3.Connection, cache_dir: Path, min_partidos: int = 5):
+    return construir_dataset(_filas_historico(conn), mapa_elo(conn, cache_dir), min_partidos)
 
 
-def ajustar(equipos: list[int], h, a, gh, ga, w, reg: float = 0.01) -> dict:
+def ajustar(equipos, h, a, gh, ga, w, elo_norm, reg: float = 0.05) -> dict:
     n = len(equipos)
     gln = gammaln(gh + 1) + gammaln(ga + 1)
     m00 = (gh == 0) & (ga == 0)
     m01 = (gh == 0) & (ga == 1)
     m10 = (gh == 1) & (ga == 0)
     m11 = (gh == 1) & (ga == 1)
+    ed = elo_norm
 
     def negll(theta):
         al, be = theta[:n], theta[n : 2 * n]
-        mu, gamma, rho = theta[2 * n], theta[2 * n + 1], theta[2 * n + 2]
-        loglh = mu + gamma + al[h] - be[a]
-        logla = mu + al[a] - be[h]
+        mu, gamma, rho, th = theta[2 * n], theta[2 * n + 1], theta[2 * n + 2], theta[2 * n + 3]
+        d = th * (ed[h] - ed[a])
+        loglh = mu + gamma + d + al[h] - be[a]
+        logla = mu - d + al[a] - be[h]
         lh, la = np.exp(loglh), np.exp(logla)
         ll = gh * loglh - lh + ga * logla - la - gln
         tau = np.ones_like(lh)
@@ -85,20 +112,24 @@ def ajustar(equipos: list[int], h, a, gh, ga, w, reg: float = 0.01) -> dict:
         ll = ll + np.log(np.clip(tau, 1e-9, None))
         return -np.sum(w * ll) + reg * (np.sum(al * al) + np.sum(be * be))
 
-    theta0 = np.zeros(2 * n + 3)
+    theta0 = np.zeros(2 * n + 4)
     theta0[2 * n] = math.log(1.3)
     theta0[2 * n + 1] = 0.25
     theta0[2 * n + 2] = -0.05
-    bounds = [(-3, 3)] * (2 * n) + [(-2, 2), (-1, 1), (-0.2, 0.2)]
+    theta0[2 * n + 3] = 0.30
+    bounds = [(-3, 3)] * (2 * n) + [(-2, 2), (-1, 1), (-0.2, 0.2), (0.0, 2.0)]
     res = minimize(negll, theta0, method="L-BFGS-B", bounds=bounds)
 
     al, be = res.x[:n], res.x[n : 2 * n]
-    mu, gamma, rho = res.x[2 * n], res.x[2 * n + 1], res.x[2 * n + 2]
+    mu, gamma, rho, th = res.x[2 * n], res.x[2 * n + 1], res.x[2 * n + 2], res.x[2 * n + 3]
     media = float(np.mean(al))
     al = al - media
     mu = mu + media
-    fuerzas = {str(equipos[i]): {"ataque": float(al[i]), "defensa": float(be[i])} for i in range(n)}
-    return {"fuerzas": fuerzas, "mu": float(mu), "gamma": float(gamma), "rho": float(rho)}
+    fuerzas = {
+        str(equipos[i]): {"ataque": float(al[i]), "defensa": float(be[i]), "e": float(ed[i])}
+        for i in range(n)
+    }
+    return {"fuerzas": fuerzas, "mu": float(mu), "gamma": float(gamma), "rho": float(rho), "theta": float(th)}
 
 
 def guardar(data_dir: Path, params: dict, ref: datetime) -> None:
@@ -120,8 +151,11 @@ def lambdas_desde_fuerzas(api_h: int, api_a: int, f: dict, aj: Ajustes, ventaja_
     kh, ka = str(api_h), str(api_a)
     if kh not in fz or ka not in fz:
         return None
-    loglh = f["mu"] + ventaja_local + fz[kh]["ataque"] - fz[ka]["defensa"]
-    logla = f["mu"] + fz[ka]["ataque"] - fz[kh]["defensa"]
+    th = f.get("theta", 0.0)
+    eh, ea = fz[kh].get("e", 0.0), fz[ka].get("e", 0.0)
+    d = th * (eh - ea)
+    loglh = f["mu"] + ventaja_local + d + fz[kh]["ataque"] - fz[ka]["defensa"]
+    logla = f["mu"] - d + fz[ka]["ataque"] - fz[kh]["defensa"]
     lh = math.exp(loglh) * aj.ataque_local * aj.defensa_visita
     la = math.exp(logla) * aj.ataque_visita * aj.defensa_local
     return lh, la

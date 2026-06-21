@@ -12,7 +12,7 @@ from src.modelo.fuerzas import cargar as cargar_fuerzas
 from src.modelo.valor import corregir_empate, sin_vig
 
 HOSTS = {"USA", "MEX", "CAN"}
-W_MERCADO_DEFAULT = 0.5
+W_MERCADO_DEFAULT = 0.65
 
 
 def main() -> int:

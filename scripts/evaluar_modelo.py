@@ -3,7 +3,7 @@ from __future__ import annotations
 from src.config import load_config
 from src.db.database import connect
 from src.modelo.evaluacion import estrato, media, prob_fuerzas, resultado, rps
-from src.modelo.fuerzas import _filas_historico, _parse, ajustar, cargar as cargar_fuerzas, construir_dataset
+from src.modelo.fuerzas import _filas_historico, _parse, ajustar, cargar as cargar_fuerzas, construir_dataset, mapa_elo
 from src.modelo.valor import sin_vig
 
 HOSTS = {"USA", "MEX", "CAN"}
@@ -27,8 +27,9 @@ def main() -> int:
     filas.sort(key=lambda r: _parse(r["fecha"]))
     corte = int(len(filas) * 0.7)
     train, test = filas[:corte], filas[corte:]
-    ds = construir_dataset(train, min_partidos=5)
-    params = ajustar(ds[0], ds[1], ds[2], ds[3], ds[4], ds[5])
+    elo_por_api = mapa_elo(conn, cfg.cache_dir)
+    ds = construir_dataset(train, elo_por_api, min_partidos=5)
+    params = ajustar(ds[0], ds[1], ds[2], ds[3], ds[4], ds[5], ds[6])
 
     n = len(train)
     hw = sum(1 for r in train if r["gh"] > r["ga"])

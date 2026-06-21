@@ -10,12 +10,12 @@ from src.modelo.fuerzas import ajustar, cargar_partidos, guardar
 def main() -> int:
     cfg = load_config()
     conn = connect(cfg.db_path)
-    equipos, h, a, gh, ga, w, ref = cargar_partidos(conn)
+    equipos, h, a, gh, ga, w, elo_norm, ref = cargar_partidos(conn, cfg.cache_dir)
     if len(equipos) < 2:
         print("histórico insuficiente (corre ingestar_historico)")
         return 1
 
-    params = ajustar(equipos, h, a, gh, ga, w)
+    params = ajustar(equipos, h, a, gh, ga, w, elo_norm)
     guardar(cfg.data_dir, params, ref)
 
     with conn:
@@ -26,7 +26,7 @@ def main() -> int:
             )
 
     print(f"equipos estimados: {len(equipos)} | partidos usados: {len(h)} | ref {ref.date()}")
-    print(f"mu {params['mu']:.3f} | ventaja local x{math.exp(params['gamma']):.3f} | rho {params['rho']:.3f}")
+    print(f"mu {params['mu']:.3f} | ventaja local x{math.exp(params['gamma']):.3f} | rho {params['rho']:.3f} | theta(Elo) {params['theta']:.3f}")
     print("--- top ataque (de las 48) ---")
     for r in conn.execute(
         "SELECT fifa_code, fuerza_ataque, fuerza_defensa, elo FROM equipos "

@@ -60,6 +60,8 @@ def main(local: str, visita: str) -> int:
     clave = {"1": local, "X": "X", "2": visita}
     novig = sin_vig({s: cuotas[clave[s]] for s in ("1", "X", "2")}) if len(cuotas) >= 3 else {}
     trabajo = mezclar_1x2(modelo, novig, w_mercado) if novig else modelo
+    divergencia = max(abs(modelo[s] - novig[s]) for s in ("1", "X", "2")) if novig else 0.0
+    fiable = divergencia <= 0.18
 
     print(f"{eq[local]['nombre']} vs {eq[visita]['nombre']}  [{metodo}]")
     print(f"lambda {lh:.2f} - {la:.2f} | goles esperados {lh + la:.2f}")
@@ -68,11 +70,13 @@ def main(local: str, visita: str) -> int:
     for sel, etq in (("1", local), ("X", "Empate"), ("2", visita)):
         pn = f"{novig[sel] * 100:5.1f}%" if sel in novig else "   -  "
         cu = cuotas.get(clave[sel])
-        e = f"{ev(trabajo[sel], cu):+.3f}" if cu else "  -"
+        e = (f"{ev(trabajo[sel], cu):+.3f}" if fiable else "n/f") if cu else "  -"
         print(f"  {etq:8} {modelo[sel] * 100:5.1f}%   {pn}    {trabajo[sel] * 100:5.1f}%   {cu if cu else '-':>5}   {e}")
     print()
     print(f"  Over 2.5  {prob['over25'] * 100:5.1f}%   |  Under 2.5  {prob['under25'] * 100:5.1f}%")
     print(f"  BTTS Si   {prob['btts_si'] * 100:5.1f}%   |  BTTS No    {prob['btts_no'] * 100:5.1f}%")
+    if novig and not fiable:
+        print(f"\n  AVISO: el modelo diverge {divergencia * 100:.0f}pp del mercado sharp -> poco fiable, EV no valido (probable fallo del modelo, no valor)")
     return 0
 
 
