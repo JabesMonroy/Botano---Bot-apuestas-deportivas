@@ -1,19 +1,49 @@
 fifa_code,nombre,confederacion,api_football_id,sofascore_id,fbref_id,eloratings_name,odds_api_name
-JPN,Japón,AFC,,,,,
-KOR,Corea del Sur,AFC,,,,,
-MAR,Marruecos,CAF,,,,,
-SEN,Senegal,CAF,,,,,
-CAN,Canadá,CONCACAF,,,,,
-MEX,México,CONCACAF,,,,,
-USA,Estados Unidos,CONCACAF,,,,,
-ARG,Argentina,CONMEBOL,,,,,
-BRA,Brasil,CONMEBOL,,,,,
-NZL,Nueva Zelanda,OFC,,,,,
-BEL,Bélgica,UEFA,,,,,
-CRO,Croacia,UEFA,,,,,
-ENG,Inglaterra,UEFA,,,,,
-ESP,España,UEFA,,,,,
-FRA,Francia,UEFA,,,,,
-GER,Alemania,UEFA,,,,,
-NED,Países Bajos,UEFA,,,,,
-POR,Portugal,UEFA,,,,,
+AUS,Australia,AFC,,,,,Australia
+IRN,Irán,AFC,,,,,Iran
+IRQ,Irak,AFC,,,,,Iraq
+JPN,Japón,AFC,,,,,Japan
+JOR,Jordania,AFC,,,,,Jordan
+KOR,Corea del Sur,AFC,,,,,South Korea
+QAT,Catar,AFC,,,,,Qatar
+KSA,Arabia Saudita,AFC,,,,,Saudi Arabia
+UZB,Uzbekistán,AFC,,,,,Uzbekistan
+ALG,Argelia,CAF,,,,,Algeria
+CPV,Cabo Verde,CAF,,,,,Cape Verde
+COD,RD Congo,CAF,,,,,DR Congo
+EGY,Egipto,CAF,,,,,Egypt
+GHA,Ghana,CAF,,,,,Ghana
+CIV,Costa de Marfil,CAF,,,,,Ivory Coast
+MAR,Marruecos,CAF,,,,,Morocco
+SEN,Senegal,CAF,,,,,Senegal
+RSA,Sudáfrica,CAF,,,,,South Africa
+TUN,Túnez,CAF,,,,,Tunisia
+CAN,Canadá,CONCACAF,,,,,Canada
+CUW,Curazao,CONCACAF,,,,,Curaçao
+HAI,Haití,CONCACAF,,,,,Haiti
+MEX,México,CONCACAF,,,,,Mexico
+PAN,Panamá,CONCACAF,,,,,Panama
+USA,Estados Unidos,CONCACAF,,,,,USA
+ARG,Argentina,CONMEBOL,,,,,Argentina
+BRA,Brasil,CONMEBOL,,,,,Brazil
+COL,Colombia,CONMEBOL,,,,,Colombia
+ECU,Ecuador,CONMEBOL,,,,,Ecuador
+PAR,Paraguay,CONMEBOL,,,,,Paraguay
+URU,Uruguay,CONMEBOL,,,,,Uruguay
+NZL,Nueva Zelanda,OFC,,,,,New Zealand
+AUT,Austria,UEFA,,,,,Austria
+BEL,Bélgica,UEFA,,,,,Belgium
+BIH,Bosnia y Herzegovina,UEFA,,,,,Bosnia & Herzegovina
+CRO,Croacia,UEFA,,,,,Croatia
+CZE,República Checa,UEFA,,,,,Czech Republic
+ENG,Inglaterra,UEFA,,,,,England
+FRA,Francia,UEFA,,,,,France
+GER,Alemania,UEFA,,,,,Germany
+NED,Países Bajos,UEFA,,,,,Netherlands
+NOR,Noruega,UEFA,,,,,Norway
+POR,Portugal,UEFA,,,,,Portugal
+SCO,Escocia,UEFA,,,,,Scotland
+ESP,España,UEFA,,,,,Spain
+SWE,Suecia,UEFA,,,,,Sweden
+SUI,Suiza,UEFA,,,,,Switzerland
+TUR,Turquía,UEFA,,,,,Turkey

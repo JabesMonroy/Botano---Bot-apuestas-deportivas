@@ -28,15 +28,17 @@ Panorama real de fuentes (priorizando gratuitas). No asumas más acceso del que 
 
 ### 1.1 APIs estructuradas (free tier)
 
-- **API-Football (API-Sports)** — *columna vertebral de datos estructurados*. 100 req/día en plan gratis. Fixtures, estadísticas de equipo, alineaciones, lesiones (`injuries`), H2H, eventos. Ser quirúrgico: cachear todo lo estable (plantillas, historial) y reservar requests en vivo solo para el día del partido.
-- **The Odds API** — agregador de cuotas de múltiples casas, **incluye Pinnacle** (la casa más afilada). Free tier ~500 req/mes. Crítico para: (a) obtener la línea *sharp* de referencia, (b) calcular *no-vig*, (c) detectar valor y arbitraje. Es el complemento que faltaba a Betano.
-- **football-data.org** — 12 ligas top europeas, 10 req/min, sin cuotas. Poco útil para selecciones; usar solo para cruzar forma de jugadores en sus clubes.
+- **The Odds API** — **columna vertebral en vivo del Mundial 2026** (verificado: `soccer_fifa_world_cup` y `soccer_fifa_world_cup_winner` activos, ~24 casas incl. Pinnacle, 48 selecciones reales). Da calendario, equipos, cuotas y futuros. ~500 req/mes; el coste por request = `markets × regions`. Base de fixtures, cuotas, *no-vig*, EV y línea *sharp* de referencia.
+- **API-Football (API-Sports)** — 100 req/día. **El plan free NO da acceso a la temporada en curso (solo 2022-2024)**, por lo que NO sirve para datos en vivo del Mundial 2026. Su rol es **histórico/calibración**: Mundial 2022 y partidos de selecciones 2022-2024 para estimar fuerzas ataque/defensa y validar el modelo (`fixtures`, `fixtures/statistics`, `injuries`, H2H). Liga del Mundial = `id=1`.
+- **football-data.org** — free tier con key (10 req/min); cubre la competición World Cup. Rol: **resultados oficiales, tabla de grupos (standings) y calendario** estructurados del Mundial 2026, complemento de The Odds API (que no da resultados ni standings).
 - **OpenWeatherMap** — free tier para clima por estadio/hora (temperatura, humedad, viento, lluvia). Relevante en sedes calurosas (Houston, Dallas, Miami, Monterrey).
 - **Club Elo (clubelo.com)** — API gratuita de Elo de clubes (para forma del jugador en su club).
 - **Footystats** — estadísticas por mercado muy granulares: % de Over/Under córners, tarjetas, BTTS, primer/segundo tiempo, promedios a favor/en contra por equipo. Free tier limitado + API de pago opcional. Útil como *check* rápido de mercados secundarios.
 - **SportMonks / SportRadar (trial)** — APIs de pago con free trial; solo si hace falta cobertura de eventos en vivo (córners/tarjetas minuto a minuto) que API-Football no dé. Evaluar antes de depender de ellas.
 
-> Nota: API-Football ya entrega **córners, tarjetas, faltas, tiros y posesión** por partido vía `fixtures/statistics` y `fixtures/events`. Es la fuente primaria de estos mercados; las demás son contraste.
+> Arquitectura de fuentes (en vivo vs histórico):
+> - **Mundial 2026 en vivo**: cuotas/calendario → The Odds API; resultados/standings → football-data.org; estadísticas ricas (xG, córners, tarjetas, alineaciones, árbitro) → **Sofascore (scraping)**.
+> - **Histórico/calibración (2022-2024)**: API-Football, que sí entrega córners, tarjetas, faltas, tiros y posesión vía `fixtures/statistics` y `fixtures/events` para estimar fuerzas y validar el modelo.
 
 ### 1.2 Datos por scraping / descarga (sin API o fuera de API)
 
