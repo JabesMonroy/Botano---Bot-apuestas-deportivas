@@ -23,12 +23,11 @@ def _norm(t: str) -> str:
 
 def main() -> int:
     cfg = load_config()
-    valores = Transfermarkt(cfg.cache_dir).valores()
-    idx = {_norm(n): v for n, v in valores.items()}
+    idx = {_norm(n): par for n, par in Transfermarkt(cfg.cache_dir).participantes().items()}
 
     csv_path = cfg.data_dir / "referencia" / "equipos_mundial2026.csv"
     equipos = cargar_csv(csv_path)
-    asignados: dict[str, float] = {}
+    asignados: dict[str, tuple[int, float | None]] = {}
     for e in equipos:
         candidatos = (e.odds_api_name, e.eloratings_name, e.football_data_name, e.nombre, *OVERRIDES.get(e.fifa_code, ()))
         for n in candidatos:
@@ -37,20 +36,21 @@ def main() -> int:
                 break
 
     conn = connect(cfg.db_path)
-    try:
-        conn.execute("ALTER TABLE equipos ADD COLUMN valor_plantilla REAL")
-        conn.commit()
-    except sqlite3.OperationalError:
-        pass
+    for col in ("valor_plantilla REAL", "transfermarkt_id INTEGER"):
+        try:
+            conn.execute(f"ALTER TABLE equipos ADD COLUMN {col}")
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass
     with conn:
-        for fifa, v in asignados.items():
-            conn.execute("UPDATE equipos SET valor_plantilla=? WHERE fifa_code=?", (v, fifa))
+        for fifa, (vid, val) in asignados.items():
+            conn.execute("UPDATE equipos SET valor_plantilla=?, transfermarkt_id=? WHERE fifa_code=?", (val, vid, fifa))
     sin = [e.fifa_code for e in equipos if e.fifa_code not in asignados]
     conn.close()
 
-    print(f"valor de plantilla asignado: {len(asignados)}/{len(equipos)} (fuente Transfermarkt, en M€)")
+    print(f"valor/transfermarkt_id asignado: {len(asignados)}/{len(equipos)}")
     if sin:
-        print("sin valor (conciliar nombre):", ", ".join(sin))
+        print("sin datos (conciliar nombre):", ", ".join(sin))
     return 0
 
 

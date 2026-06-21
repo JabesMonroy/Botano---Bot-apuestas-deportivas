@@ -20,6 +20,9 @@ class FootballData:
     def competition(self, code: int | str = WORLD_CUP) -> dict[str, Any]:
         return self._client.get(f"/v4/competitions/{code}", ttl=86400)
 
+    def equipo(self, team_id: int) -> dict[str, Any]:
+        return self._client.get(f"/v4/teams/{team_id}", ttl=86400)
+
     def standings(self, code: int | str = WORLD_CUP, **params: Any) -> dict[str, Any]:
         return self._client.get(f"/v4/competitions/{code}/standings", params=params, ttl=3600)
 
