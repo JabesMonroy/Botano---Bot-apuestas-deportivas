@@ -60,9 +60,11 @@ python -m scripts.validar_apis
 python -m scripts.cargar_mapeo        # 48 selecciones
 python -m scripts.actualizar          # partidos, resultados, standings, cuotas del Mundial
 python -m scripts.ingestar_elo        # Elo de las 48
+python -m scripts.ingestar_valor      # valor de plantilla (Transfermarkt, proxy de calidad)
 python -m scripts.ingestar_historico  # ~1900 partidos de selección 2022-24 (consume API-Football)
 python -m scripts.estimar_fuerzas     # fuerzas Dixon-Coles ancladas al Elo
 python -m scripts.calibrar_sesgo      # corrección de empate + shrinkage
+python -m scripts.calibrar_valor      # peso del valor de plantilla (calibrado al mercado)
 ```
 
 ## Uso diario
