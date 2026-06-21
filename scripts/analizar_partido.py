@@ -4,7 +4,9 @@ import sys
 
 from src.config import load_config
 from src.db.database import connect
-from src.modelo.dixon_coles import Ajustes, lambdas, matriz_marcadores, mercados
+from src.modelo.dixon_coles import Ajustes, ParametrosModelo, lambdas, matriz_marcadores, mercados
+from src.modelo.fuerzas import cargar as cargar_fuerzas
+from src.modelo.fuerzas import lambdas_desde_fuerzas
 from src.modelo.parametros import HOSTS, cargar
 from src.modelo.valor import ev, sin_vig
 
@@ -12,13 +14,33 @@ from src.modelo.valor import ev, sin_vig
 def main(local: str, visita: str) -> int:
     cfg = load_config()
     conn = connect(cfg.db_path)
-    eq = {r["fifa_code"]: r for r in conn.execute("SELECT fifa_code, nombre, elo FROM equipos")}
-    if local not in eq or visita not in eq or eq[local]["elo"] is None or eq[visita]["elo"] is None:
-        print("fifa_code sin datos (revisa codigo o ingesta de Elo)")
+    eq = {
+        r["fifa_code"]: r
+        for r in conn.execute("SELECT fifa_code, nombre, elo, api_football_id FROM equipos")
+    }
+    if local not in eq or visita not in eq:
+        print("fifa_code no encontrado")
         return 1
 
-    par = cargar(cfg.data_dir, conn, local_es_host=local in HOSTS)
-    lh, la = lambdas(eq[local]["elo"], eq[visita]["elo"], par, Ajustes())
+    aj = Ajustes()
+    fuerzas = cargar_fuerzas(cfg.data_dir)
+    res = None
+    if fuerzas and eq[local]["api_football_id"] and eq[visita]["api_football_id"]:
+        res = lambdas_desde_fuerzas(
+            eq[local]["api_football_id"], eq[visita]["api_football_id"], fuerzas, aj, es_host=local in HOSTS
+        )
+    if res is not None:
+        metodo = "fuerzas (Dixon-Coles historico)"
+        lh, la = res
+        par = ParametrosModelo(tasa_base=0.0, rho=fuerzas["rho"])
+    else:
+        if eq[local]["elo"] is None or eq[visita]["elo"] is None:
+            print("sin fuerzas ni Elo para el par")
+            return 1
+        metodo = "Elo (fallback)"
+        par = cargar(cfg.data_dir, conn, local_es_host=local in HOSTS)
+        lh, la = lambdas(eq[local]["elo"], eq[visita]["elo"], par, aj)
+
     prob = mercados(matriz_marcadores(lh, la, par))
 
     partido = conn.execute(
@@ -38,8 +60,8 @@ def main(local: str, visita: str) -> int:
     clave = {"1": local, "X": "X", "2": visita}
     novig = sin_vig({s: cuotas[clave[s]] for s in ("1", "X", "2")}) if len(cuotas) >= 3 else {}
 
-    print(f"{eq[local]['nombre']} (Elo {int(eq[local]['elo'])}) vs {eq[visita]['nombre']} (Elo {int(eq[visita]['elo'])})")
-    print(f"tasa base {par.tasa_base:.2f} | beta {par.beta_elo:.3f} | lambda {lh:.2f} - {la:.2f} | goles esp. {lh + la:.2f}")
+    print(f"{eq[local]['nombre']} vs {eq[visita]['nombre']}  [{metodo}]")
+    print(f"lambda {lh:.2f} - {la:.2f} | goles esperados {lh + la:.2f}")
     print()
     print("mercado    modelo   pinnacle   cuota      EV")
     for sel, etq in (("1", local), ("X", "Empate"), ("2", visita)):
