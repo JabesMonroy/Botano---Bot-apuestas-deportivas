@@ -101,6 +101,23 @@ CREATE TABLE IF NOT EXISTS apuestas (
     fecha TEXT
 );
 
+CREATE TABLE IF NOT EXISTS standings (
+    id INTEGER PRIMARY KEY,
+    grupo TEXT,
+    equipo_id INTEGER REFERENCES equipos(id),
+    posicion INTEGER,
+    jugados INTEGER,
+    ganados INTEGER,
+    empatados INTEGER,
+    perdidos INTEGER,
+    goles_favor INTEGER,
+    goles_contra INTEGER,
+    diferencia INTEGER,
+    puntos INTEGER,
+    actualizado TEXT,
+    UNIQUE(grupo, equipo_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_cuotas_partido ON cuotas(partido_id);
 CREATE INDEX IF NOT EXISTS idx_predicciones_partido ON predicciones(partido_id);
 CREATE INDEX IF NOT EXISTS idx_partidos_fecha ON partidos(fecha);

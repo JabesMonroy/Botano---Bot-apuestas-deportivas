@@ -28,6 +28,12 @@ def _parse(iso: str | None) -> datetime | None:
         return None
 
 
+def _grupo(valor: str | None) -> str | None:
+    if not valor:
+        return None
+    return valor.replace("_", " ").split()[-1].upper()
+
+
 def ingestar_partidos(conn: sqlite3.Connection, fd: FootballData) -> int:
     por_fd = {
         r["football_data_id"]: r["id"]
@@ -48,7 +54,7 @@ def ingestar_partidos(conn: sqlite3.Connection, fd: FootballData) -> int:
                 local,
                 visita,
                 m.get("stage"),
-                m.get("group"),
+                _grupo(m.get("group")),
                 m.get("status"),
                 ahora,
             )
@@ -64,6 +70,89 @@ def ingestar_partidos(conn: sqlite3.Connection, fd: FootballData) -> int:
             fase = excluded.fase,
             grupo = excluded.grupo,
             estado = excluded.estado,
+            actualizado = excluded.actualizado
+    """
+    with conn:
+        conn.executemany(sql, filas)
+    return len(filas)
+
+
+def ingestar_resultados(conn: sqlite3.Connection, fd: FootballData) -> int:
+    por_match = {
+        r["football_data_id"]: r["id"]
+        for r in conn.execute("SELECT id, football_data_id FROM partidos WHERE football_data_id IS NOT NULL")
+    }
+    data = fd.matches()
+    filas = []
+    for m in data.get("matches", []):
+        pid = por_match.get(m.get("id"))
+        if pid is None:
+            continue
+        ft = ((m.get("score") or {}).get("fullTime")) or {}
+        gl, gv = ft.get("home"), ft.get("away")
+        if gl is None or gv is None:
+            continue
+        filas.append((pid, gl, gv, m.get("utcDate")))
+    sql = """
+        INSERT INTO resultados (partido_id, goles_local, goles_visita, finalizado)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(partido_id) DO UPDATE SET
+            goles_local = excluded.goles_local,
+            goles_visita = excluded.goles_visita,
+            finalizado = excluded.finalizado
+    """
+    with conn:
+        conn.executemany(sql, filas)
+    return len(filas)
+
+
+def ingestar_standings(conn: sqlite3.Connection, fd: FootballData) -> int:
+    por_fd = {
+        r["football_data_id"]: r["id"]
+        for r in conn.execute("SELECT id, football_data_id FROM equipos WHERE football_data_id IS NOT NULL")
+    }
+    st = fd.standings()
+    ahora = _ahora()
+    filas = []
+    for grupo in st.get("standings", []):
+        if grupo.get("type") not in (None, "TOTAL"):
+            continue
+        g = _grupo(grupo.get("group"))
+        for fila in grupo.get("table", []):
+            eq = por_fd.get((fila.get("team") or {}).get("id"))
+            if eq is None:
+                continue
+            filas.append(
+                (
+                    g,
+                    eq,
+                    fila.get("position"),
+                    fila.get("playedGames"),
+                    fila.get("won"),
+                    fila.get("draw"),
+                    fila.get("lost"),
+                    fila.get("goalsFor"),
+                    fila.get("goalsAgainst"),
+                    fila.get("goalDifference"),
+                    fila.get("points"),
+                    ahora,
+                )
+            )
+    sql = """
+        INSERT INTO standings (
+            grupo, equipo_id, posicion, jugados, ganados, empatados, perdidos,
+            goles_favor, goles_contra, diferencia, puntos, actualizado
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(grupo, equipo_id) DO UPDATE SET
+            posicion = excluded.posicion,
+            jugados = excluded.jugados,
+            ganados = excluded.ganados,
+            empatados = excluded.empatados,
+            perdidos = excluded.perdidos,
+            goles_favor = excluded.goles_favor,
+            goles_contra = excluded.goles_contra,
+            diferencia = excluded.diferencia,
+            puntos = excluded.puntos,
             actualizado = excluded.actualizado
     """
     with conn:
