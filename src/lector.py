@@ -4,6 +4,11 @@ import io
 import re
 import unicodedata
 
+CORNERS = [6.5, 7.5, 8.5, 9.5, 10.5, 11.5]
+GOLES = [0.5, 1.5, 2.5, 3.5, 4.5]
+TARJETAS_O = [1.5, 2.5, 3.5, 4.5]
+TARJETAS_U = [2.5, 3.5, 4.5, 5.5]
+
 
 def _norm(t: str) -> str:
     return unicodedata.normalize("NFKD", t or "").encode("ascii", "ignore").decode().lower()
@@ -24,15 +29,8 @@ def _linea_cercana(n: int, disponibles: list[float]) -> float | None:
     return min(cand, key=lambda l: abs(l - objetivo)) if cand else None
 
 
-CORNERS = [6.5, 7.5, 8.5, 9.5, 10.5, 11.5]
-TARJETAS_O = [1.5, 2.5, 3.5, 4.5]
-TARJETAS_U = [2.5, 3.5, 4.5, 5.5]
-
-
-def analizar(texto: str, equipos: list[tuple[str, str, str]]):
-    """equipos: lista de (nombre_norm, fifa_code, nombre_display). Devuelve (local, visita, [mercados])."""
+def _detectar_equipos(texto: str, equipos):
     t = _norm(texto)
-
     hallados = []
     for nombre_norm, fifa, disp in equipos:
         pos = t.find(nombre_norm)
@@ -40,43 +38,64 @@ def analizar(texto: str, equipos: list[tuple[str, str, str]]):
             hallados.append((pos, fifa, disp))
     hallados.sort()
     orden, vistos = [], set()
-    for _pos, fifa, disp in hallados:
+    for _p, fifa, disp in hallados:
         if fifa not in vistos:
             vistos.add(fifa)
             orden.append((fifa, disp))
-    local = orden[0] if orden else None
-    visita = orden[1] if len(orden) > 1 else None
+    return (orden[0] if orden else None, orden[1] if len(orden) > 1 else None)
 
-    mercados: list[str] = []
 
-    for fifa, disp in orden[:2]:
-        if re.search(rf"gana\w*\s+{re.escape(_norm(disp))}", t) or re.search(rf"{re.escape(_norm(disp))}\s+gana", t):
-            mercados.append("Gana local" if local and fifa == local[0] else "Gana visita")
-    if re.search(r"\bempate\b", t):
-        mercados.append("Empate")
-    if re.search(r"ambos\s+(?:equipos\s+)?(?:anotan|marcan)", t):
-        mercados.append("Ambos anotan")
+def _equipo_de(sel: str, equipos):
+    for nombre_norm, fifa, _disp in equipos:
+        if nombre_norm in sel:
+            return fifa
+    return None
 
-    for m in re.finditer(r"m[a]s de (\d)[.,\s]?5?\s*gol", t):
-        mercados.append(f"Más de {m.group(1)}.5 goles")
-    for m in re.finditer(r"menos de (\d)[.,\s]?5?\s*gol", t):
-        mercados.append(f"Menos de {m.group(1)}.5 goles")
 
-    for m in re.finditer(r"(?:corner|esquina).{0,30}?(mas|menos).{0,8}?(\d{1,2})", t):
-        linea = _linea_cercana(int(m.group(2)), CORNERS)
-        if linea:
-            mercados.append(f"{'Más' if m.group(1) == 'mas' else 'Menos'} de {linea} córners")
-    for m in re.finditer(r"tarjeta.{0,30}?(m[a]s|menos).{0,8}?(\d{1,2})", t):
-        es_mas = m.group(1) == "mas"
-        linea = _linea_cercana(int(m.group(2)), TARJETAS_O if es_mas else TARJETAS_U)
-        if linea:
-            mercados.append(f"{'Más' if es_mas else 'Menos'} de {linea} tarjetas")
+def _sel_linea(sel: str, palabra: str, lineas_o: list[float], lineas_u: list[float]) -> str | None:
+    md = re.search(r"\b(mas|menos)\b", sel)
+    if not md:
+        return None
+    es_mas = md.group(1) == "mas"
+    num = re.search(r"(\d+)[.,\s]+5\b", sel) or re.search(r"(\d{1,2})5\b", sel) or re.search(r"(\d+)", sel)
+    if not num:
+        return None
+    linea = _linea_cercana(int(num.group(1)), lineas_o if es_mas else lineas_u)
+    if linea is None:
+        return None
+    return f"{'Más' if es_mas else 'Menos'} de {linea} {palabra}"
 
-    for m in re.finditer(r"(?:primer|proximo|prox\.?)\s+gol\s+(\w+)", t):
-        objetivo = m.group(1)
-        if local and objetivo in _norm(local[1]):
-            mercados.append("Primer gol: local")
-        elif visita and objetivo in _norm(visita[1]):
-            mercados.append("Primer gol: visita")
 
+def analizar(texto: str, equipos):
+    lineas = [l.strip() for l in texto.splitlines() if l.strip()]
+    local, visita = _detectar_equipos(texto, equipos)
+    mercados = []
+    for i, linea in enumerate(lineas):
+        tipo = _norm(linea)
+        sel = _norm(lineas[i - 1]) if i > 0 else ""
+        m = None
+        if "resultado del partido" in tipo:
+            fifa = _equipo_de(sel, equipos)
+            if local and fifa == local[0]:
+                m = "Gana local"
+            elif visita and fifa == visita[0]:
+                m = "Gana visita"
+            elif "empate" in sel:
+                m = "Empate"
+        elif "proximo gol" in tipo or "gol 1" in tipo or "primer gol" in tipo:
+            fifa = _equipo_de(sel, equipos)
+            if local and fifa == local[0]:
+                m = "Primer gol: local"
+            elif visita and fifa == visita[0]:
+                m = "Primer gol: visita"
+        elif "esquina" in tipo or "corner" in tipo:
+            m = _sel_linea(sel, "córners", CORNERS, CORNERS)
+        elif "tarjeta" in tipo:
+            m = _sel_linea(sel, "tarjetas", TARJETAS_O, TARJETAS_U)
+        elif "gol" in tipo and "total" in tipo:
+            m = _sel_linea(sel, "goles", GOLES, GOLES)
+        elif "ambos" in tipo:
+            m = "Ambos anotan"
+        if m:
+            mercados.append(m)
     return local, visita, list(dict.fromkeys(mercados))

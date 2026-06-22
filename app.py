@@ -94,6 +94,30 @@ def _prob_partido_combi(a, mercados):
     return p_corr * extra, p_naive * extra
 
 
+def _prob_individual(a, spec):
+    if spec[0] == "g":
+        return prob_marginal(a.matriz, spec[1])
+    if spec[0] == "c" and a.corners_esp:
+        ov = over_under(a.corners_esp, [spec[1]])[spec[1]]
+        return ov if spec[2] == "o" else 1 - ov
+    if spec[0] == "t" and a.tarjetas_esp:
+        ov = over_under(a.tarjetas_esp, [spec[1]])[spec[1]]
+        return ov if spec[2] == "o" else 1 - ov
+    if spec[0] == "pg":
+        pl, pv, sin = _primer_gol(a.lh, a.la, float(a.matriz[0, 0]))
+        return {"l": pl, "v": pv, "n": sin}[spec[1]]
+    return 1.0
+
+
+def _desglose(pares):
+    acum = 1.0
+    filas = []
+    for nombre, prob in pares:
+        acum *= prob
+        filas.append({"Selección": nombre, "Probabilidad": _pct(prob), "Prob. acumulada": _pct(acum)})
+    return pd.DataFrame(filas)
+
+
 def _pct(x) -> str:
     return f"{x * 100:.1f}%" if x is not None else "—"
 
@@ -309,12 +333,12 @@ def mostrar_analisis(a, ctx) -> None:
     z2.metric(f"Tiros {a.nombre_visita}", f"{tiros_v:.0f}", f"al arco ~{arco_v:.0f}")
     z3.metric("Tiros totales", f"{tiros_l + tiros_v:.0f}", f"al arco ~{arco_l + arco_v:.0f}")
     zt, za = st.columns(2)
-    ot = over_under(tiros_l + tiros_v, _lineas(tiros_l + tiros_v))
+    ot = over_under(tiros_l + tiros_v, [x + 0.5 for x in range(12, 25)])
     zt.markdown("**Tiros totales (líneas)**")
-    zt.table(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in ot.items()]))
-    oa = over_under(arco_l + arco_v, _lineas(arco_l + arco_v, (-3.5, -1.5, 0.5, 2.5)))
+    zt.dataframe(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in ot.items()]), hide_index=True, use_container_width=True)
+    oa = over_under(arco_l + arco_v, [x + 0.5 for x in range(2, 9)])
     za.markdown("**Tiros al arco totales (líneas)**")
-    za.table(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in oa.items()]))
+    za.dataframe(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in oa.items()]), hide_index=True, use_container_width=True)
     st.info(f"**Estimación** (no es un dato medido): tiros ≈ goles esperados ÷ {k:.3f} y al arco ≈ {ratio_arco * 100:.0f}% — **parámetros calibrados con los tiros reales del Mundial 2022 (StatsBomb)**, no inventados. Orientativo.")
 
     st.markdown("####  Probabilidades por línea (más de / menos de)")
@@ -327,9 +351,9 @@ def mostrar_analisis(a, ctx) -> None:
     ]))
     col_g.caption(f"Debido a que se esperan **{a.lh + a.la:.1f} goles** (ataque de {a.nombre_local} vs defensa de {a.nombre_visita} y viceversa): las líneas bajas son casi seguras y las altas caen rápido.")
     if a.corners_esp:
-        oc = over_under(a.corners_esp, [6.5, 7.5, 8.5, 9.5, 10.5, 11.5])
+        oc = over_under(a.corners_esp, [3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5])
         col_c.markdown("**Córners totales**")
-        col_c.table(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in oc.items()]))
+        col_c.dataframe(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in oc.items()]), hide_index=True, use_container_width=True)
         col_c.caption(f"Debido al dominio esperado: {a.nombre_local} es _{_estilo(pl).split(',')[0]}_ y {a.nombre_visita} _{_estilo(pv).split(',')[0]}_; cuanto más ofensivo, más córners genera.")
     if a.tarjetas_esp:
         ot = over_under(tarjetas_final, [0.5, 1.5, 2.5, 3.5, 4.5, 5.5])
@@ -341,9 +365,9 @@ def mostrar_analisis(a, ctx) -> None:
     st.markdown("####  Goles por equipo y primer gol")
     eq1, eq2, eq3 = st.columns(3)
     eq1.markdown(f"**{a.nombre_local} marca…**")
-    eq1.table(pd.DataFrame([{"Línea": f"Más de {x}", "Prob.": _pct(_over_equipo(a.matriz, 0, x))} for x in (0.5, 1.5, 2.5)]))
+    eq1.table(pd.DataFrame([{"Goles": x, "Más de": _pct(_over_equipo(a.matriz, 0, x)), "Menos de": _pct(1 - _over_equipo(a.matriz, 0, x))} for x in (0.5, 1.5, 2.5, 3.5)]))
     eq2.markdown(f"**{a.nombre_visita} marca…**")
-    eq2.table(pd.DataFrame([{"Línea": f"Más de {x}", "Prob.": _pct(_over_equipo(a.matriz, 1, x))} for x in (0.5, 1.5, 2.5)]))
+    eq2.table(pd.DataFrame([{"Goles": x, "Más de": _pct(_over_equipo(a.matriz, 1, x)), "Menos de": _pct(1 - _over_equipo(a.matriz, 1, x))} for x in (0.5, 1.5, 2.5, 3.5)]))
     p_local, p_visita, p_sin = _primer_gol(a.lh, a.la, float(a.matriz[0, 0]))
     eq3.markdown("**¿Quién marca primero?**")
     eq3.metric(a.nombre_local, _pct(p_local))
@@ -465,7 +489,7 @@ elif pagina == "Combinada":
         for l, v, mer in seleccion:
             grupos.setdefault((l, v), []).append(mer)
         conn = connect(CFG.db_path)
-        p_corr, p_naive, fiable, filas, ok = 1.0, 1.0, True, [], True
+        p_corr, p_naive, fiable, filas, pares, ok = 1.0, 1.0, True, [], [], True
         for (l, v), nombres in grupos.items():
             a = analizar_1x2(conn, CFG.data_dir, l, v)
             if a is None:
@@ -477,10 +501,14 @@ elif pagina == "Combinada":
             p_corr *= corr
             p_naive *= naive
             fiable = fiable and a.fiable
+            for nm in nombres:
+                pares.append((f"{l}-{v}: {nm}", _prob_individual(a, MERCADOS_COMBI[nm])))
             filas.append({"Partido": f"{a.nombre_local}-{a.nombre_visita}", "Selecciones": ", ".join(nombres), "Correcta": _pct(corr), "Naive": _pct(naive)})
         conn.close()
         if ok:
-            st.dataframe(pd.DataFrame(filas), hide_index=True, use_container_width=True)
+            st.markdown("**Desglose: cómo baja con cada selección**")
+            st.table(_desglose(pares))
+            st.caption("Cada selección multiplica la probabilidad: el 'acumulado' muestra cómo cae al añadir cada una. El total ajusta además por la correlación entre los goles de un mismo partido.")
             m1, m2 = st.columns(2)
             m1.metric("Probabilidad combinada (correcta)", _pct(p_corr), f"naive (multiplicar marginales): {_pct(p_naive)}")
             if cuota and cuota > 1:
@@ -491,12 +519,22 @@ elif pagina == "Combinada":
 elif pagina == "Leer captura":
     st.title("Leer combinada desde una captura")
     st.caption("Sube una captura de tu combinada de Betano (de un solo partido). El bot detecta equipos y mercados con OCR; revisa y ajusta lo detectado antes de calcular.")
-    archivo = st.file_uploader("Captura de la combinada (PNG/JPG)", type=["png", "jpg", "jpeg"])
-    if archivo:
+    from streamlit_paste_button import paste_image_button
+    pegar = paste_image_button("📋 Pegar captura (Ctrl+V)", errors="ignore")
+    archivo = st.file_uploader("…o sube el archivo (PNG/JPG)", type=["png", "jpg", "jpeg"])
+    imagen_bytes = None
+    if pegar.image_data is not None:
+        import io as _io
+        _buf = _io.BytesIO()
+        pegar.image_data.save(_buf, format="PNG")
+        imagen_bytes = _buf.getvalue()
+    elif archivo:
+        imagen_bytes = archivo.getvalue()
+    if imagen_bytes:
         from src.lector import analizar, ocr
         try:
             with st.spinner("Leyendo la imagen con OCR de Windows..."):
-                texto = ocr(archivo.getvalue())
+                texto = ocr(imagen_bytes)
         except Exception as exc:
             st.error(f"No se pudo leer la imagen: {exc}")
             texto = ""
@@ -523,6 +561,8 @@ elif pagina == "Leer captura":
                         st.error("Sin datos para ese partido.")
                     else:
                         corr, naive = _prob_partido_combi(a, [MERCADOS_COMBI[m] for m in mer_sel])
+                        st.markdown("**Desglose: cómo baja con cada selección**")
+                        st.table(_desglose([(m, _prob_individual(a, MERCADOS_COMBI[m])) for m in mer_sel]))
                         m1, m2 = st.columns(2)
                         m1.metric("Probabilidad de la combinada", _pct(corr), f"naive: {_pct(naive)}")
                         m2.metric("Cuota justa del modelo", f"{1 / corr:.2f}" if corr > 0 else "—")
