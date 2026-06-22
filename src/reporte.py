@@ -198,6 +198,9 @@ def formato_consola(a: Analisis, ctx: dict | None, confianza: str) -> str:
     out.append(f"  CONFIANZA: {confianza}")
     if a.novig and not a.fiable:
         out.append(f"  [!] El modelo difiere {a.divergencia * 100:.0f}pp del mercado: NO fiable, no apostar por esta diferencia.")
+    out.append("-" * anc)
+    out.append("  Leyenda: EV = valor (+ conviene, - no, n/f = no fiable).")
+    out.append("  Over 9.5 = 10 o más.  Glosario completo: opción 10 del menú.")
     out.append("=" * anc)
     return "\n".join(out)
 

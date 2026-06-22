@@ -3,6 +3,55 @@ from __future__ import annotations
 from src.config import load_config
 from src.db.database import connect
 
+GLOSARIO = """
+QUÉ SIGNIFICA CADA TÉRMINO
+============================================================
+
+Elo
+  Fuerza de una selección según sus resultados. Sube al ganar
+  (más si el rival es fuerte) y baja al perder.
+  Referencia: 2000+ = elite, ~1800 = buena, ~1500 = floja.
+
+xG (goles esperados)
+  Calidad de las ocasiones que GENERA un equipo por partido:
+  cuántos goles "merecería" por sus oportunidades (no los que mete).
+xGA
+  Igual, pero de las ocasiones que CONCEDE (su defensa). Menos = mejor.
+  Se muestra como  xG/xGA  (ej. 1.74/0.70 = genera 1.74, concede 0.70).
+
+Valor de plantilla
+  Valor de mercado de los jugadores (Transfermarkt). Aproxima la
+  calidad individual del plantel.
+
+EV (valor esperado)
+  Cuánto ganas o pierdes de media por cada unidad apostada, según el bot.
+    EV +0.05    -> a la larga ganarías ~5% (hay valor, candidato a apostar).
+    EV negativo -> la cuota paga menos de lo justo (no apostar).
+    n/f         -> el modelo no es fiable ahí (no apostar por esa diferencia).
+
+Modelo / Mercado / Apostar (columnas del pronóstico)
+  Modelo  = probabilidad que estima el bot.
+  Mercado = probabilidad de la cuota de Pinnacle, sin el margen de la casa.
+  Apostar = mezcla de las dos; es la que se usa para el EV.
+
+Over (O) = "más de"
+  O9.5 córners  = MÁS de 9.5, o sea 10 o más córners.
+  O2.5 goles    = 3 o más goles.
+  O3.5 tarjetas = 4 o más tarjetas.
+  El % es la probabilidad de que ocurra (ej. O9.5: 45% = 45% de que haya 10+).
+
+Ambos anotan (BTTS)
+  Probabilidad de que los DOS equipos marquen al menos un gol.
+
+Confianza
+  Alto/medio/bajo según cuánto coincide el modelo con el mercado
+  y la calidad de los datos.
+
+CLV (en el historial)
+  ¿Tu cuota fue mejor que la de cierre del mercado? Si tu CLV es
+  positivo con el tiempo, es la mejor señal de que vas bien.
+============================================================"""
+
 MENU = """
 ============================================================
    BOTANO — Análisis de apuestas · Mundial 2026
@@ -16,6 +65,7 @@ MENU = """
   7) Registrar una apuesta de Betano
   8) Ver historial y CLV
   9) Ver códigos de equipos
+ 10) Ayuda — qué significa cada término (Elo, xG, EV, Over...)
   0) Salir
 ------------------------------------------------------------"""
 
@@ -74,6 +124,8 @@ def _accion(opcion: str, cfg) -> None:
         m()
     elif opcion == "9":
         ver_equipos(cfg)
+    elif opcion == "10":
+        print(GLOSARIO)
     else:
         print("Opción no válida.")
 
