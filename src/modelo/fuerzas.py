@@ -151,10 +151,11 @@ def lambdas_desde_fuerzas(api_h: int, api_a: int, f: dict, aj: Ajustes, ventaja_
     kh, ka = str(api_h), str(api_a)
     if kh not in fz or ka not in fz:
         return None
-    th, tv = f.get("theta", 0.0), f.get("theta_valor", 0.0)
+    th, tv, txg = f.get("theta", 0.0), f.get("theta_valor", 0.0), f.get("theta_xg", 0.0)
     eh, ea = fz[kh].get("e", 0.0), fz[ka].get("e", 0.0)
     wh, wa = fz[kh].get("w", 0.0), fz[ka].get("w", 0.0)
-    d = th * (eh - ea) + tv * (wh - wa)
+    sxh, sxa = fz[kh].get("sx", 0.0), fz[ka].get("sx", 0.0)
+    d = th * (eh - ea) + tv * (wh - wa) + txg * (sxh - sxa)
     loglh = f["mu"] + ventaja_local + d + fz[kh]["ataque"] - fz[ka]["defensa"]
     logla = f["mu"] - d + fz[ka]["ataque"] - fz[kh]["defensa"]
     lh = math.exp(loglh) * aj.ataque_local * aj.defensa_visita

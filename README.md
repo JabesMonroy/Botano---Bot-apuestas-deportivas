@@ -68,6 +68,7 @@ python -m scripts.ingestar_historico  # ~1900 partidos de selección 2022-24 (co
 python -m scripts.estimar_fuerzas     # fuerzas Dixon-Coles ancladas al Elo
 python -m scripts.calibrar_sesgo      # corrección de empate + shrinkage
 python -m scripts.calibrar_valor      # peso del valor de plantilla (calibrado al mercado)
+python -m scripts.calibrar_xg         # peso del xG de selección (calibrado al mercado)
 ```
 
 ## Uso diario
