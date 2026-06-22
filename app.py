@@ -464,8 +464,9 @@ def equipos_busqueda():
 
 @st.cache_data(ttl=600, show_spinner=False)
 def proximos_partidos():
-    from datetime import date
+    from datetime import datetime, timedelta, timezone
 
+    bog = timezone(timedelta(hours=-5))
     conn = connect(CFG.db_path)
     filas = conn.execute(
         "SELECT p.fecha, el.fifa_code lf, el.nombre ln, ev.fifa_code vf, ev.nombre vn "
@@ -474,12 +475,21 @@ def proximos_partidos():
         "WHERE p.estado IN ('TIMED','SCHEDULED') ORDER BY p.fecha"
     ).fetchall()
     conn.close()
-    hoy = date.today().isoformat()
+    hoy = datetime.now(bog).date()
     out = []
     for r in filas:
-        f = r["fecha"] or ""
-        etiqueta = ("🔴 HOY · " if f[:10] == hoy else f"{f[:10]} · ") + f"{f[11:16]} {r['ln']} vs {r['vn']}"
-        out.append((etiqueta, r["lf"], r["vf"]))
+        try:
+            dt = datetime.fromisoformat((r["fecha"] or "").replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        loc = dt.astimezone(bog)
+        dia = (loc.date() - hoy).days
+        if dia not in (0, 1):
+            continue
+        out.append({"dia": dia, "fecha": loc.strftime("%d/%m"), "hora": loc.strftime("%H:%M"),
+                    "lf": r["lf"], "ln": r["ln"], "vf": r["vf"], "vn": r["vn"]})
     return out
 
 
@@ -491,18 +501,30 @@ st.sidebar.caption("Herramienta de análisis, no garantía de ganancia.")
 
 if pagina == "Analizar partido":
     st.title("Analizar partido")
+    if "sb_local" not in st.session_state:
+        st.session_state.sb_local = NOMBRES[0]
+    if "sb_visita" not in st.session_state:
+        st.session_state.sb_visita = NOMBRES[1]
     prox = proximos_partidos()
-    li, vi = 0, 1
     if prox:
-        opc = ["(elegir manualmente)"] + [p[0] for p in prox]
-        elegido = st.selectbox("⚡ Próximos partidos del Mundial (elige uno y se rellenan los equipos)", opc)
-        if elegido != "(elegir manualmente)":
-            _, lf, vf = prox[opc.index(elegido) - 1]
-            li = next((k for k, nom in enumerate(NOMBRES) if EQUIPOS[nom] == lf), 0)
-            vi = next((k for k, nom in enumerate(NOMBRES) if EQUIPOS[nom] == vf), 1)
+        st.markdown("**⚡ Partidos de hoy y mañana** — haz clic en uno y se rellenan los equipos (horario de Colombia):")
+        for etiqueta, dnum in (("Hoy", 0), ("Mañana", 1)):
+            deldia = [p for p in prox if p["dia"] == dnum]
+            if not deldia:
+                continue
+            st.markdown(f"**{etiqueta}** · {deldia[0]['fecha']}")
+            cols = st.columns(2)
+            for i, p in enumerate(deldia):
+                if cols[i % 2].button(f"🕐 {p['hora']} · {p['ln']} vs {p['vn']}", key=f"pb_{dnum}_{i}", use_container_width=True):
+                    nl = next((n for n in NOMBRES if EQUIPOS[n] == p["lf"]), None)
+                    nv = next((n for n in NOMBRES if EQUIPOS[n] == p["vf"]), None)
+                    if nl:
+                        st.session_state.sb_local = nl
+                    if nv:
+                        st.session_state.sb_visita = nv
     c1, c2 = st.columns(2)
-    local = c1.selectbox("Local", NOMBRES, index=li)
-    visita = c2.selectbox("Visitante", NOMBRES, index=vi)
+    local = c1.selectbox("Local", NOMBRES, key="sb_local")
+    visita = c2.selectbox("Visitante", NOMBRES, key="sb_visita")
     descontar = st.checkbox("Descontar bajas automáticamente (consulta internet)")
     if st.button("Analizar", type="primary"):
         l, v = EQUIPOS[local], EQUIPOS[visita]
