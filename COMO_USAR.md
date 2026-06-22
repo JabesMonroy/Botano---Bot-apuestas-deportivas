@@ -7,9 +7,13 @@ Guía rápida y directa. No necesitas saber programar: todo se maneja desde un m
 ## La forma más fácil (recomendada): doble clic
 
 1. **Una sola vez:** doble clic en **`instalar.bat`** (prepara todo; tarda un par de minutos).
-2. **Siempre que quieras usarlo:** doble clic en **`iniciar.bat`** (abre el menú).
+2. **Para usarlo**, elige una:
+   - **`interfaz.bat`** → abre la **versión visual** en tu navegador (menús desplegables, tablas con color, gráficos). **Recomendada.**
+   - **`iniciar.bat`** → abre el **menú de texto** en una ventana, si prefieres algo ligero.
 
 Eso es todo. Si esto te funciona, puedes ignorar el resto del documento.
+
+> La interfaz visual se abre sola en el navegador. Para cerrarla, cierra la ventana negra que se quedó abierta.
 
 > Antes del primer `instalar.bat`, pega tus claves en el archivo `.env` (ver "Paso 1" más abajo, el punto de las claves).
 
