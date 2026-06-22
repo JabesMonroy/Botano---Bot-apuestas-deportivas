@@ -159,7 +159,7 @@ def _mercado_seg(seg: str, fam: str, lf: str, vf: str, equipos):
     return None
 
 
-def _detectar_partidos(t: str, equipos):
+def _detectar_partidos(t: str, equipos, tipos_pos):
     apar = []
     for nn, fifa, _d in equipos:
         s = 0
@@ -183,7 +183,8 @@ def _detectar_partidos(t: str, equipos):
     while i < len(apar) - 1:
         _p0, e0, f0 = apar[i]
         p1, e1, f1 = apar[i + 1]
-        if f1 != f0 and (p1 - e0) < 45:
+        hay_tipo = any(e0 <= tp < p1 for tp in tipos_pos)
+        if f1 != f0 and (p1 - e0) < 45 and not hay_tipo:
             partidos.append((apar[i][0], e1, f0, f1))
             i += 2
         else:
@@ -196,7 +197,6 @@ def analizar_multi(texto: str, equipos):
     disp_de = {}
     for nn, fifa, disp in equipos:
         disp_de.setdefault(fifa, disp)
-    partidos = _detectar_partidos(t, equipos)
 
     ocur = []
     for kw, fam in TIPOS_MERCADO:
@@ -208,6 +208,7 @@ def analizar_multi(texto: str, equipos):
             ocur.append((p, p + len(kw), fam))
             s = p + 1
     ocur.sort()
+    partidos = _detectar_partidos(t, equipos, [o[0] for o in ocur])
 
     out, prev = [], 0
     for p0, p1, fam in ocur:

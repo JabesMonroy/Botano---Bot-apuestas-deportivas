@@ -619,6 +619,8 @@ elif pagina == "Combinada":
         with st.expander("Texto leído por el OCR (revisa si algo se detectó mal)"):
             for txt in textos:
                 st.text(txt)
+        if any("anotar en cualquier" in t.lower() or "marcar en cualquier" in t.lower() for t in textos):
+            st.warning("Detecté mercado(s) de **goleador** (p. ej. *Anotar en cualquier momento*). El modelo Dixon-Coles no estima goles por jugador, así que **no se incluyen** en el cálculo: valóralos aparte.")
         vistas, filas_init = set(), []
         for loc, vis, m in detectadas:
             clave = (loc[0], vis[0], m)
