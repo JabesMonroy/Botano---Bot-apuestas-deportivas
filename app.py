@@ -102,11 +102,31 @@ def _ajustes_por_bajas(local: str, visita: str):
     return aj, ("  ·  ".join(detalle) if detalle else "No se detectaron ausencias en la convocatoria.")
 
 
+@st.cache_data(show_spinner="Consultando estadísticas del árbitro...")
+def tasa_arbitro(nombre: str):
+    if not nombre:
+        return None
+    try:
+        from src.scrapers.transfermarkt import Transfermarkt
+        return Transfermarkt(CFG.cache_dir).arbitro_tarjetas(nombre)
+    except Exception:
+        return None
+
+
 def mostrar_analisis(a, ctx) -> None:
+    arb_stats = tasa_arbitro(ctx.get("arbitro")) if ctx and ctx.get("arbitro") else None
+    tarjetas_final = a.tarjetas_esp
+    if a.tarjetas_esp and arb_stats:
+        tarjetas_final = 0.5 * a.tarjetas_esp + 0.5 * arb_stats["amarillas_pp"]
+
     st.subheader(f"{a.nombre_local}  vs  {a.nombre_visita}")
     if ctx:
         fecha = ctx["fecha"][:16].replace("T", " ") if ctx["fecha"] else "?"
-        arb = f" · Árbitro: {ctx['arbitro']}" if ctx.get("arbitro") else ""
+        arb = ""
+        if ctx.get("arbitro"):
+            arb = f" · Árbitro: {ctx['arbitro']}"
+            if arb_stats:
+                arb += f" ({arb_stats['amarillas_pp']:.1f} amarillas/partido)"
         st.caption(f"Grupo {ctx['grupo']} · {fecha} · {ctx['estado']}{arb}")
 
     izq, der = st.columns(2)
@@ -200,10 +220,11 @@ def mostrar_analisis(a, ctx) -> None:
             s1.metric("Córners esperados", f"{a.corners_esp:.1f}")
             s1.caption(" · ".join(f"+{l}: {_pct(p)}" for l, p in o.items()))
         if a.tarjetas_esp:
-            o = over_under(a.tarjetas_esp, [2.5, 3.5, 4.5])
-            s2.metric("Tarjetas esperadas", f"{a.tarjetas_esp:.1f}")
+            o = over_under(tarjetas_final, [2.5, 3.5, 4.5])
+            s2.metric("Tarjetas esperadas", f"{tarjetas_final:.1f}", "ajustado por el árbitro" if arb_stats else None)
             s2.caption(" · ".join(f"+{l}: {_pct(p)}" for l, p in o.items()))
-        st.caption("Modelo **Poisson** sobre los promedios recientes de cada selección (fuente de los promedios: Footystats). '+9.5' = 10 o más.")
+        nota_arb = ", combinados con la **severidad del árbitro** (Transfermarkt)" if arb_stats else ""
+        st.caption(f"Córners y tarjetas: modelo **Poisson** sobre los promedios de cada selección (Footystats){nota_arb}. '+9.5' = 10 o más.")
 
     st.markdown("####  Probabilidades por línea (más de / menos de)")
     col_g, col_c, col_t = st.columns(3)
@@ -218,7 +239,7 @@ def mostrar_analisis(a, ctx) -> None:
         col_c.markdown("**Córners totales**")
         col_c.table(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in oc.items()]))
     if a.tarjetas_esp:
-        ot = over_under(a.tarjetas_esp, [0.5, 1.5, 2.5, 3.5, 4.5, 5.5])
+        ot = over_under(tarjetas_final, [0.5, 1.5, 2.5, 3.5, 4.5, 5.5])
         col_t.markdown("**Tarjetas totales**")
         col_t.table(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in ot.items()]))
 
@@ -238,9 +259,12 @@ def mostrar_analisis(a, ctx) -> None:
     tend = "tiende a pocos goles" if tot < 2.3 else ("tiende a muchos goles" if tot > 2.9 else "tendencia media de goles")
     just = f"**Goles**: con {tot:.1f} esperados, el partido {tend}; por eso las líneas bajas son casi seguras y las altas caen rápido. "
     just += f"**Córners**: {a.nombre_local} es {_estilo(pl)} y {a.nombre_visita} es {_estilo(pv)} — cuanto más ofensivo y dominante, más córners. "
-    just += "**Tarjetas**: suben con la intensidad del partido y con el criterio del árbitro"
-    if ctx and ctx.get("arbitro"):
-        just += f" (designado: **{ctx['arbitro']}**; su tendencia exacta conviene mirarla aparte)."
+    just += f"**Tarjetas** (~{tarjetas_final:.1f} esperadas): suben con la intensidad y con el criterio del árbitro"
+    if arb_stats:
+        sev = "severo" if arb_stats["amarillas_pp"] >= 4.5 else ("permisivo" if arb_stats["amarillas_pp"] < 3.5 else "moderado")
+        just += f" — **{ctx['arbitro']}** es {sev} ({arb_stats['amarillas_pp']:.1f} amarillas/partido), ya reflejado en la cifra."
+    elif ctx and ctx.get("arbitro"):
+        just += f" (designado: {ctx['arbitro']})."
     else:
         just += " (árbitro aún sin designar)."
     st.caption(just)

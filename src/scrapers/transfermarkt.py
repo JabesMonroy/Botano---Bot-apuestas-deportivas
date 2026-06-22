@@ -22,6 +22,11 @@ def _num(txt: str) -> float | None:
     return x * 1000 if m.group(2) == "bn" else (x if m.group(2) == "m" else x / 1000)
 
 
+def _intval(txt: str) -> int:
+    t = txt.replace(".", "").replace(",", "").strip()
+    return int(t) if t.isdigit() else 0
+
+
 class Transfermarkt:
     def __init__(self, cache_dir: Path, ttl: float = 86400) -> None:
         self._cache = cache_dir / "transfermarkt"
@@ -69,6 +74,50 @@ class Transfermarkt:
         r.raise_for_status()
         destino.write_text(r.text, encoding="utf-8")
         return r.text
+
+    def _id_arbitro(self, nombre: str) -> str | None:
+        r = httpx.get(
+            "https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche",
+            params={"query": nombre},
+            headers={"User-Agent": UA, "Accept-Language": "en-US,en;q=0.9"},
+            timeout=25,
+            follow_redirects=True,
+        )
+        m = re.search(r"/profil/schiedsrichter/(\d+)", r.text)
+        return m.group(1) if m else None
+
+    def _html_arbitro(self, arbitro_id: str) -> str:
+        destino = self._cache / f"arbitro_{arbitro_id}.html"
+        if destino.exists() and time.time() - destino.stat().st_mtime < self._ttl:
+            return destino.read_text(encoding="utf-8")
+        r = httpx.get(
+            f"https://www.transfermarkt.com/x/profil/schiedsrichter/{arbitro_id}",
+            headers={"User-Agent": UA, "Accept-Language": "en-US,en;q=0.9"},
+            timeout=25,
+            follow_redirects=True,
+        )
+        r.raise_for_status()
+        destino.write_text(r.text, encoding="utf-8")
+        return r.text
+
+    def arbitro_tarjetas(self, nombre: str) -> dict | None:
+        arbitro_id = self._id_arbitro(nombre)
+        if not arbitro_id:
+            return None
+        tabla = BeautifulSoup(self._html_arbitro(arbitro_id), "lxml").select_one("table.items")
+        if tabla is None:
+            return None
+        partidos = amarillas = rojas = 0
+        for tr in tabla.select("tbody tr"):
+            tds = [td.get_text(strip=True) for td in tr.select("td")]
+            if len(tds) < 6:
+                continue
+            partidos += _intval(tds[2])
+            amarillas += _intval(tds[3])
+            rojas += _intval(tds[5])
+        if partidos < 5:
+            return None
+        return {"partidos": partidos, "amarillas_pp": amarillas / partidos, "rojas_pp": rojas / partidos}
 
     def kader(self, verein_id: int) -> list[tuple[str, str, float | None]]:
         soup = BeautifulSoup(self._html_kader(verein_id), "lxml")
