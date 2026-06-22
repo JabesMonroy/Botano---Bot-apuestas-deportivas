@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from src.apuestas import actualizar, registrar
 from src.config import load_config
 from src.db.database import connect
 from src.modelo.bet_builder import prob_conjunta, prob_marginal
@@ -486,7 +485,7 @@ def proximos_partidos():
 
 st.sidebar.title("⚽ Botano")
 st.sidebar.caption("Mundial 2026")
-pagina = st.sidebar.radio("Menú", ["Analizar partido", "Combinada", "Mis apuestas / CLV", "Glosario"])
+pagina = st.sidebar.radio("Menú", ["Analizar partido", "Analizar apuesta", "Glosario"])
 st.sidebar.caption("Herramienta de análisis, no garantía de ganancia.")
 
 
@@ -524,12 +523,13 @@ if pagina == "Analizar partido":
             else:
                 mostrar_analisis(a, ctx)
 
-elif pagina == "Combinada":
-    st.title("Combinada (bet builder)")
-    st.caption("Lee tu combinada desde una captura de Betano (recomendado) o ármala a mano. "
+elif pagina == "Analizar apuesta":
+    st.title("Analizar apuesta")
+    st.caption("Lee tu apuesta desde una captura de Betano (recomendado) o ármala a mano. "
                "Dentro de un mismo partido se usa la correlación real (matriz Dixon-Coles para goles); córners y tarjetas se tratan como independientes.")
 
-    st.subheader("📷 Leer desde una captura")
+    st.header("Analizar sencilla")
+    st.caption("Una sola captura, de un mismo partido (uno o varios mercados).")
     from streamlit_paste_button import paste_image_button
     pegar = paste_image_button("📋 Pegar captura (Ctrl+V)", errors="ignore")
     archivo = st.file_uploader("…o sube el archivo (PNG/JPG)", type=["png", "jpg", "jpeg"])
@@ -587,7 +587,7 @@ elif pagina == "Combinada":
                         st.info(f"**Por qué parece bajo:** la combinada se cumple solo si ocurren **las {len(mer_sel)} selecciones a la vez**, así que sus probabilidades se multiplican. Cada pata añadida baja la probabilidad total y sube la cuota. Tiene valor solo si tu cuota supera la justa del modelo.")
 
     st.divider()
-    st.subheader("🧩 Combinada de varios partidos")
+    st.header("Analizar combinada")
     st.caption("Pega (Ctrl+V) o sube una o varias capturas de una combinada con partidos distintos. El bot detecta cada partido con su mercado; revísalo y corrige en la tabla antes de calcular.")
     from streamlit_paste_button import paste_image_button
     pegar_m = paste_image_button("📋 Pegar captura (Ctrl+V)", errors="ignore", key="multi_paste")
@@ -712,48 +712,6 @@ elif pagina == "Combinada":
                 if cuota_m and cuota_m > 1:
                     m2.metric("Valor (EV)", f"{ev(p_corr, cuota_m):+.3f}" if fiable else "n/f")
                     st.caption(f"Cuota justa según el modelo: **{1 / p_corr:.2f}**. " + ("Tiene valor solo si tu cuota la supera." if fiable else "Algún partido es poco fiable vs el mercado (EV no válido)."))
-
-elif pagina == "Mis apuestas / CLV":
-    st.title("Mis apuestas y CLV")
-    with st.form("registrar"):
-        st.markdown("**Registrar una apuesta hecha en Betano**")
-        b1, b2, b3 = st.columns(3)
-        loc = b1.selectbox("Local", NOMBRES, index=0)
-        vis = b2.selectbox("Visitante", NOMBRES, index=1)
-        sel = b3.selectbox("Tu apuesta", ["Gana local (1)", "Empate (X)", "Gana visita (2)"])
-        b4, b5 = st.columns(2)
-        cuota = b4.number_input("Cuota de Betano", 1.01, 1000.0, 2.0, step=0.05)
-        stake = b5.number_input("Stake (0 = sugerencia Kelly)", 0.0, 100000.0, 0.0)
-        if st.form_submit_button("Registrar", type="primary"):
-            conn = connect(CFG.db_path)
-            mapa = {"Gana local (1)": "1", "Empate (X)": "X", "Gana visita (2)": "2"}
-            r = registrar(conn, CFG.data_dir, EQUIPOS[loc], EQUIPOS[vis], mapa[sel], cuota, stake if stake > 0 else None)
-            conn.close()
-            if r:
-                st.success(f"Registrada. EV {r['ev']:+.3f} · Kelly sugerido {r['kelly_pct']:.1f}% del bankroll")
-            else:
-                st.error("No se pudo registrar (revisa el partido).")
-
-    conn = connect(CFG.db_path)
-    actualizar(conn)
-    rows = conn.execute(
-        "SELECT a.seleccion, a.cuota_betano, a.cuota_cierre, a.clv, a.ev, a.stake, a.resultado, el.fifa_code fl, ev.fifa_code fv "
-        "FROM apuestas a JOIN partidos p ON a.partido_id=p.id JOIN equipos el ON p.equipo_local_id=el.id "
-        "JOIN equipos ev ON p.equipo_visita_id=ev.id ORDER BY a.fecha"
-    ).fetchall()
-    conn.close()
-    if rows:
-        df = pd.DataFrame([
-            {"Partido": f"{r['fl']}-{r['fv']}", "Apuesta": r["seleccion"], "Cuota": r["cuota_betano"], "Cierre": r["cuota_cierre"],
-             "CLV": (f"{r['clv'] * 100:+.1f}%" if r["clv"] is not None else "—"), "EV": f"{r['ev']:+.3f}", "Stake": r["stake"], "Resultado": r["resultado"] or "pendiente"}
-            for r in rows
-        ])
-        st.dataframe(df, hide_index=True, use_container_width=True)
-        clvs = [r["clv"] for r in rows if r["clv"] is not None]
-        if clvs:
-            st.metric("CLV medio", f"{sum(clvs) / len(clvs) * 100:+.2f}%", f"{sum(1 for c in clvs if c > 0)}/{len(clvs)} positivos")
-    else:
-        st.caption("Aún no has registrado apuestas.")
 
 elif pagina == "Glosario":
     st.title("Qué significa cada término")
