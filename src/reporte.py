@@ -205,6 +205,57 @@ def formato_consola(a: Analisis, ctx: dict | None, confianza: str) -> str:
     return "\n".join(out)
 
 
+def narrativa(a: Analisis) -> str:
+    pl, pv = a.perfil_local, a.perfil_visita
+    nl, nv = a.nombre_local, a.nombre_visita
+    p1, px, p2 = a.modelo["1"], a.modelo["X"], a.modelo["2"]
+    lineas = []
+
+    if max(p1, p2) < 0.45:
+        lineas.append(f"**Partido parejo:** ninguno es claro favorito ({nl} {p1 * 100:.0f}%, empate {px * 100:.0f}%, {nv} {p2 * 100:.0f}%).")
+    else:
+        favn, favp, ofa, ori = (nl, p1, pl, pv) if p1 > p2 else (nv, p2, pv, pl)
+        razones = []
+        if ofa.get("elo") and ori.get("elo") and ofa["elo"] - ori["elo"] > 60:
+            razones.append(f"bastante más Elo ({int(ofa['elo'])} frente a {int(ori['elo'])})")
+        if ofa.get("valor_plantilla") and ori.get("valor_plantilla") and ofa["valor_plantilla"] > ori["valor_plantilla"] * 1.4:
+            razones.append(f"una plantilla más cara ({ofa['valor_plantilla']:.0f} vs {ori['valor_plantilla']:.0f} M€)")
+        if ofa.get("xg_fs") and ori.get("xg_fs") and ofa["xg_fs"] > ori["xg_fs"] + 0.4:
+            razones.append("mejor xG reciente")
+        motivo = ", ".join(razones) if razones else "su mejor rendimiento general"
+        lineas.append(f"**{favn} es favorito** ({favp * 100:.0f}%), sobre todo por {motivo}.")
+
+    tot = a.lh + a.la
+    if tot < 2.3:
+        lineas.append(f"Se esperan **pocos goles** (~{tot:.1f}), por eso domina el **Under 2.5** ({a.prob['under25'] * 100:.0f}%).")
+    elif tot > 2.9:
+        lineas.append(f"Se esperan **muchos goles** (~{tot:.1f}), lo que favorece el **Over 2.5** ({a.prob['over25'] * 100:.0f}%).")
+    else:
+        lineas.append(f"Goles esperados cerca de la media (~{tot:.1f}); Over 2.5 al {a.prob['over25'] * 100:.0f}%.")
+
+    if a.prob["btts_si"] < 0.4:
+        lineas.append(f"El **'ambos anotan' es poco probable** ({a.prob['btts_si'] * 100:.0f}%): se espera que uno de los dos no marque.")
+    elif a.prob["btts_si"] > 0.55:
+        lineas.append(f"Buena chance de que **ambos marquen** ({a.prob['btts_si'] * 100:.0f}%).")
+
+    if a.corners_esp and a.tarjetas_esp:
+        lineas.append(f"En **córners** se esperan ~{a.corners_esp:.0f} y en **tarjetas** ~{a.tarjetas_esp:.1f} (según promedios recientes).")
+
+    if a.novig and a.fiable:
+        clave = {"1": a.local, "X": "X", "2": a.visita}
+        evs = {s: ev(a.trabajo[s], a.cuotas[clave[s]]) for s in ("1", "X", "2") if a.cuotas.get(clave[s])}
+        mejor = max(evs, key=evs.get) if evs else None
+        if mejor and evs[mejor] > 0.02:
+            etq = {"1": nl, "X": "el empate", "2": nv}[mejor]
+            lineas.append(f"Frente al mercado, la opción con algo de **valor** sería **{etq}** (EV {evs[mejor]:+.2f}).")
+        else:
+            lineas.append("Frente al mercado, **ninguna opción ofrece valor claro**: las cuotas ya reflejan bien las probabilidades.")
+    elif a.novig and not a.fiable:
+        lineas.append("El modelo **difiere mucho del mercado** aquí: se considera poco fiable y no conviene apostar por esa diferencia.")
+
+    return "\n\n".join(lineas)
+
+
 def generar_markdown(a: Analisis, ctx: dict | None, confianza: str) -> str:
     clave = {"1": a.local, "X": "X", "2": a.visita}
     etq = {"1": a.nombre_local, "X": "Empate", "2": a.nombre_visita}

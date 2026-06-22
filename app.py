@@ -11,7 +11,7 @@ from src.modelo.dixon_coles import Ajustes
 from src.modelo.secundarios import over_under
 from src.modelo.valor import ev
 from src.plantillas import detectar_ausencias, multiplicadores
-from src.reporte import analizar_1x2, contexto_partido, nivel_confianza
+from src.reporte import analizar_1x2, contexto_partido, narrativa, nivel_confianza
 
 st.set_page_config(page_title="Botano · Mundial 2026", page_icon="⚽", layout="wide")
 CFG = load_config()
@@ -77,11 +77,13 @@ def mostrar_analisis(a, ctx) -> None:
         {
             a.nombre_local: [pl.get("elo"), pl.get("valor_plantilla"), _xg(pl), pl.get("corners_favor"), pl.get("tarjetas_partido")],
             a.nombre_visita: [pv.get("elo"), pv.get("valor_plantilla"), _xg(pv), pv.get("corners_favor"), pv.get("tarjetas_partido")],
+            "Fuente": ["eloratings.net", "Transfermarkt", "Footystats", "Footystats", "Footystats"],
         },
         index=["Elo", "Valor plantilla (M€)", "xG / xGA", "Córners (prom.)", "Tarjetas (prom.)"],
     )
     izq.markdown("**Perfil de los equipos**")
     izq.table(perfil)
+    izq.caption("Elo: sistema de puntos por resultados (eloratings.net). xG: goles esperados por calidad de ocasiones (Footystats).")
 
     if ctx and ctx.get("standings"):
         der.markdown(f"**Grupo {ctx['grupo']}**")
@@ -89,6 +91,7 @@ def mostrar_analisis(a, ctx) -> None:
             pd.DataFrame([{"Pos": s["posicion"], "Equipo": s["nombre"], "PJ": s["jugados"], "Pts": s["puntos"], "DG": s["diferencia"]} for s in ctx["standings"]]),
             hide_index=True, use_container_width=True,
         )
+        der.caption("Resultados y tabla: football-data.org")
 
     st.markdown("**Pronóstico (resultado del partido)**")
     clave = {"1": a.local, "X": "X", "2": a.visita}
@@ -113,16 +116,30 @@ def mostrar_analisis(a, ctx) -> None:
         return estilos
 
     st.dataframe(pd.DataFrame(filas).style.apply(color_ev, subset=["EV"]), hide_index=True, use_container_width=True)
+    st.caption(
+        "**Cómo leer esto** · **Modelo**: probabilidad que estima el bot. "
+        "**Mercado**: la misma probabilidad según la cuota de Pinnacle, quitándole el margen de la casa (fuente: The Odds API). "
+        "**Apostar**: mezcla de las dos, es la que se usa para el valor. "
+        "**EV (valor esperado)**: cuánto ganas/pierdes de media por cada €1 apostado a esa cuota — "
+        "🟢 **positivo = hay valor** (candidato a apostar), 🔴 negativo = la cuota paga menos de lo justo, "
+        "**n/f** = el modelo no es fiable en este partido (no apostar)."
+    )
     if a.novig and not a.fiable:
         st.warning(f"El modelo difiere {a.divergencia * 100:.0f}pp del mercado: poco fiable, no apostar por esa diferencia.")
 
+    st.markdown("####  Interpretación")
+    st.markdown(narrativa(a))
+
+    st.markdown("####  Goles")
     g1, g2, g3 = st.columns(3)
     g1.metric("Goles esperados", f"{a.lh + a.la:.1f}")
     g1.caption(f"{a.nombre_local} {a.lh:.1f} - {a.la:.1f} {a.nombre_visita}")
     g2.metric("Over 2.5 goles", _pct(a.prob["over25"]))
     g3.metric("Ambos anotan", _pct(a.prob["btts_si"]))
+    st.caption("Calculado por el **modelo Dixon-Coles** del bot (no es un dato de fuente externa): estima los goles de cada equipo y de ahí la probabilidad de cada marcador.")
 
     if a.corners_esp or a.tarjetas_esp:
+        st.markdown("####  Córners y tarjetas")
         s1, s2 = st.columns(2)
         if a.corners_esp:
             o = over_under(a.corners_esp, [8.5, 9.5, 10.5])
@@ -132,8 +149,28 @@ def mostrar_analisis(a, ctx) -> None:
             o = over_under(a.tarjetas_esp, [2.5, 3.5, 4.5])
             s2.metric("Tarjetas esperadas", f"{a.tarjetas_esp:.1f}")
             s2.caption(" · ".join(f"+{l}: {_pct(p)}" for l, p in o.items()))
+        st.caption("Modelo **Poisson** sobre los promedios recientes de cada selección (fuente de los promedios: Footystats). '+9.5' = 10 o más.")
 
     st.info(f"Confianza del análisis: **{nivel_confianza(a)}**")
+
+    with st.expander("¿De dónde salen estos números? (fuentes y modelos)"):
+        st.markdown(
+            """
+**Fuentes de los datos**
+- **Elo** de selecciones → eloratings.net
+- **Valor de plantilla** → Transfermarkt
+- **xG/xGA, córners, tarjetas** → Footystats
+- **Cuotas y mercado** (Pinnacle) → The Odds API
+- **Resultados y tabla del grupo** → football-data.org
+- **Histórico de selección 2022-24** (para entrenar el modelo) → API-Football
+
+**Modelos estadísticos**
+- **Goles → Dixon-Coles** (Poisson bivariado con corrección de marcadores bajos): estima los goles esperados de cada equipo (λ) y construye la probabilidad de cada marcador. De esa matriz salen 1X2, Over/Under y Ambos anotan, todos coherentes entre sí.
+- **Fuerza de cada selección**: estimada de ~1.700 partidos (2022-24) con **ponderación temporal** (pesan más los recientes), **anclada al Elo** (compara entre confederaciones) y ajustada por el **valor de plantilla** (calibrado contra el mercado).
+- **Mercado y valor**: la columna *Mercado* quita el margen de la casa a la cuota de Pinnacle (*no-vig*); *Apostar* mezcla modelo y mercado (*shrinkage*); el **EV** compara esa probabilidad con la cuota. Un **guardarraíl** marca "n/f" cuando el modelo se aleja demasiado del mercado.
+- **Córners y tarjetas → Poisson** sobre los promedios de cada selección.
+            """
+        )
 
 
 @st.cache_data(show_spinner=False)
