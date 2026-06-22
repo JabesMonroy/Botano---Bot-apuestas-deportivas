@@ -35,12 +35,12 @@ class Analisis:
     matriz: np.ndarray
 
 
-def analizar_1x2(conn: sqlite3.Connection, data_dir: Path, local: str, visita: str) -> Analisis | None:
+def analizar_1x2(conn: sqlite3.Connection, data_dir: Path, local: str, visita: str, ajustes: Ajustes | None = None) -> Analisis | None:
     eq = {r["fifa_code"]: r for r in conn.execute("SELECT fifa_code, nombre, elo, api_football_id FROM equipos")}
     if local not in eq or visita not in eq:
         return None
 
-    aj = Ajustes()
+    aj = ajustes or Ajustes()
     fuerzas = cargar_fuerzas(data_dir)
     res = None
     if fuerzas and eq[local]["api_football_id"] and eq[visita]["api_football_id"]:

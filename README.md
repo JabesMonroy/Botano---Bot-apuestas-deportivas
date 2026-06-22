@@ -75,6 +75,8 @@ python -m scripts.generar_reporte ARG AUT     # reporte pre-partido (guarda en d
 python -m scripts.analizar_partido ESP KSA    # análisis rápido en consola
 python -m scripts.bet_builder ARG-AUT:1 ARG-AUT:under2.5 @2.10   # combinada con correlación
 python -m scripts.simular_torneo 20000        # P(avanza)/P(campeón) vs mercado
+python -m scripts.bajas ARG                    # detecta ausencias (plantilla TM vs convocados)
+python -m scripts.impacto_bajas FRA ENG "Mbappe" ""   # re-analiza descontando una baja
 python -m scripts.registrar_apuesta ARG AUT 1 1.62 10           # registrar apuesta de Betano
 python -m scripts.clv                          # actualizar cierre/CLV/resultados y ver historial
 ```
