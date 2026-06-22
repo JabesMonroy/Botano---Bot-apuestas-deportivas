@@ -30,6 +30,8 @@ def main(local: str, visita: str) -> int:
     print()
     print(f"  Over 2.5  {a.prob['over25'] * 100:5.1f}%   |  Under 2.5  {a.prob['under25'] * 100:5.1f}%")
     print(f"  BTTS Si   {a.prob['btts_si'] * 100:5.1f}%   |  BTTS No    {a.prob['btts_no'] * 100:5.1f}%")
+    if a.corners_esp:
+        print(f"  Corners esp. {a.corners_esp:.1f}   |  Tarjetas esp. {a.tarjetas_esp:.1f}" if a.tarjetas_esp else f"  Corners esp. {a.corners_esp:.1f}")
     if a.novig and not a.fiable:
         print(f"\n  AVISO: el modelo diverge {a.divergencia * 100:.0f}pp del mercado sharp -> EV no valido")
     return 0

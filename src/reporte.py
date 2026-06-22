@@ -11,6 +11,7 @@ from src.modelo.fuerzas import cargar as cargar_fuerzas
 from src.modelo.fuerzas import lambdas_desde_fuerzas
 from src.modelo.parametros import HOSTS
 from src.modelo.parametros import cargar as cargar_par
+from src.modelo.secundarios import over_under
 from src.modelo.valor import corregir_empate, ev, mezclar_1x2, sin_vig
 
 UMBRAL_DIVERGENCIA = 0.18
@@ -33,10 +34,17 @@ class Analisis:
     fiable: bool
     divergencia: float
     matriz: np.ndarray
+    corners_esp: float | None
+    tarjetas_esp: float | None
 
 
 def analizar_1x2(conn: sqlite3.Connection, data_dir: Path, local: str, visita: str, ajustes: Ajustes | None = None) -> Analisis | None:
-    eq = {r["fifa_code"]: r for r in conn.execute("SELECT fifa_code, nombre, elo, api_football_id FROM equipos")}
+    eq = {
+        r["fifa_code"]: r
+        for r in conn.execute(
+            "SELECT fifa_code, nombre, elo, api_football_id, corners_favor, tarjetas_partido FROM equipos"
+        )
+    }
     if local not in eq or visita not in eq:
         return None
 
@@ -81,9 +89,14 @@ def analizar_1x2(conn: sqlite3.Connection, data_dir: Path, local: str, visita: s
     divergencia = max(abs(modelo[s] - novig[s]) for s in ("1", "X", "2")) if novig else 0.0
     fiable = divergencia <= UMBRAL_DIVERGENCIA
 
+    cl, cv = eq[local]["corners_favor"], eq[visita]["corners_favor"]
+    tl, tv = eq[local]["tarjetas_partido"], eq[visita]["tarjetas_partido"]
+    corners_esp = (cl + cv) / 2 if (cl and cv) else None
+    tarjetas_esp = (tl + tv) if (tl and tv) else None
+
     return Analisis(
         local, visita, eq[local]["nombre"], eq[visita]["nombre"], metodo, lh, la,
-        prob, modelo, novig, trabajo, cuotas, fiable, divergencia, matriz,
+        prob, modelo, novig, trabajo, cuotas, fiable, divergencia, matriz, corners_esp, tarjetas_esp,
     )
 
 
@@ -142,6 +155,15 @@ def generar_markdown(a: Analisis, ctx: dict | None, confianza: str) -> str:
     out.append(f"- Goles esperados: **{a.lh + a.la:.2f}** (λ {a.lh:.2f} − {a.la:.2f})")
     out.append(f"- Over 2.5: {a.prob['over25'] * 100:.1f}% · Under 2.5: {a.prob['under25'] * 100:.1f}%")
     out.append(f"- Ambos anotan: Sí {a.prob['btts_si'] * 100:.1f}% · No {a.prob['btts_no'] * 100:.1f}%")
+
+    if a.corners_esp or a.tarjetas_esp:
+        out.append("\n## Mercados secundarios (Footystats)\n")
+        if a.corners_esp:
+            ou = over_under(a.corners_esp, [8.5, 9.5, 10.5, 11.5])
+            out.append(f"- Córners esperados: **{a.corners_esp:.1f}** · " + " · ".join(f"O{l} {p * 100:.0f}%" for l, p in ou.items()))
+        if a.tarjetas_esp:
+            ou = over_under(a.tarjetas_esp, [2.5, 3.5, 4.5, 5.5])
+            out.append(f"- Tarjetas esperadas: **{a.tarjetas_esp:.1f}** · " + " · ".join(f"O{l} {p * 100:.0f}%" for l, p in ou.items()))
 
     out.append(f"\n**Confianza del análisis:** {confianza}")
     if a.novig and not a.fiable:

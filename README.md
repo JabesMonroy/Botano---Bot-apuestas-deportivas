@@ -13,6 +13,8 @@ Pipeline: **5 fuentes de datos → mapeo de 48 selecciones → modelo de goles D
 | Resultados, standings | football-data.org |
 | Elo de selecciones | eloratings.net |
 | Histórico 2022-24 (calibración) | API-Football (free) |
+| Valor de plantilla / bajas | Transfermarkt |
+| Córners, tarjetas, xG | Footystats |
 | Clima | OpenWeatherMap |
 
 > API-Football free **no cubre 2026** (solo histórico). Sofascore y FBref están bloqueados por anti-bot (no se evaden).
@@ -61,6 +63,7 @@ python -m scripts.cargar_mapeo        # 48 selecciones
 python -m scripts.actualizar          # partidos, resultados, standings, cuotas del Mundial
 python -m scripts.ingestar_elo        # Elo de las 48
 python -m scripts.ingestar_valor      # valor de plantilla (Transfermarkt, proxy de calidad)
+python -m scripts.ingestar_stats      # córners/tarjetas/xG por selección (Footystats)
 python -m scripts.ingestar_historico  # ~1900 partidos de selección 2022-24 (consume API-Football)
 python -m scripts.estimar_fuerzas     # fuerzas Dixon-Coles ancladas al Elo
 python -m scripts.calibrar_sesgo      # corrección de empate + shrinkage

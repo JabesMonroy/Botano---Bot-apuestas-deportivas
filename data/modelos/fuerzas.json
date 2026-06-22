@@ -1075,7 +1075,7 @@
   "theta": 0.20263850102090453,
   "fecha_ref": "2026-03-31T18:45:00+00:00",
   "half_life": 1.5,
-  "delta_empate": 0.027,
+  "delta_empate": 0.002,
   "w_mercado": 0.65,
   "theta_valor": 0.08
 }
