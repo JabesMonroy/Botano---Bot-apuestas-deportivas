@@ -4,7 +4,18 @@ Guía rápida y directa. No necesitas saber programar: todo se maneja desde un m
 
 ---
 
-## Resumen en 2 pasos
+## La forma más fácil (recomendada): doble clic
+
+1. **Una sola vez:** doble clic en **`instalar.bat`** (prepara todo; tarda un par de minutos).
+2. **Siempre que quieras usarlo:** doble clic en **`iniciar.bat`** (abre el menú).
+
+Eso es todo. Si esto te funciona, puedes ignorar el resto del documento.
+
+> Antes del primer `instalar.bat`, pega tus claves en el archivo `.env` (ver "Paso 1" más abajo, el punto de las claves).
+
+---
+
+## Alternativa por terminal (si prefieres)
 
 1. **Una sola vez:** preparar el programa (instalar y descargar datos).
 2. **Cada vez que quieras analizar:** ejecutar el menú con `python bot.py`.
