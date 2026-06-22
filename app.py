@@ -118,6 +118,26 @@ def _desglose(pares):
     return pd.DataFrame(filas)
 
 
+FAMILIAS_PARLEY = {
+    "Resultado": ["Gana local", "Gana visita", "Local o empate (1X)", "Empate o visita (X2)", "Local o visita, no empate (12)"],
+    "Goles totales": ["Más de 1.5 goles", "Menos de 1.5 goles", "Más de 2.5 goles", "Menos de 2.5 goles", "Más de 3.5 goles", "Menos de 3.5 goles", "Menos de 4.5 goles"],
+    "Ambos anotan": ["Ambos anotan", "No ambos anotan"],
+    "Primer gol": ["Primer gol: local", "Primer gol: visita"],
+    "Córners": [k for k in MERCADOS_COMBI if "córners" in k],
+    "Tarjetas": [k for k in MERCADOS_COMBI if "tarjetas" in k],
+}
+
+
+def _parley_sugerido(a, umbral=0.68):
+    seleccion = []
+    for claves in FAMILIAS_PARLEY.values():
+        cand = [(c, _prob_individual(a, MERCADOS_COMBI[c])) for c in claves if c in MERCADOS_COMBI]
+        cand = [(c, p) for c, p in cand if p >= umbral]
+        if cand:
+            seleccion.append(max(cand, key=lambda x: x[1]))
+    return seleccion
+
+
 def _pct(x) -> str:
     return f"{x * 100:.1f}%" if x is not None else "—"
 
@@ -390,6 +410,20 @@ def mostrar_analisis(a, ctx) -> None:
 
     st.info(f"Confianza del análisis: **{nivel_confianza(a)}**")
 
+    parley = _parley_sugerido(a)
+    if parley:
+        st.markdown("#### 🎯 Parley sugerido (cada selección ≥ 68%)")
+        st.table(pd.DataFrame([{"Selección": c, "Probabilidad": _pct(p), "Cuota mínima p/ valor": f"{1 / p:.2f}"} for c, p in parley]))
+        p_parley, _ = _prob_partido_combi(a, [MERCADOS_COMBI[c] for c, _ in parley])
+        pm1, pm2 = st.columns(2)
+        pm1.metric("Probabilidad del parley", _pct(p_parley))
+        pm2.metric("Cuota mínima del parley p/ valor", f"{1 / p_parley:.2f}" if p_parley > 0 else "—")
+        st.caption(
+            "Cada selección supera el 68% individualmente. La **cuota mínima** es la cuota justa (1÷probabilidad): "
+            "por encima de ella hay valor. Si Betano paga **más** que la cuota mínima del parley, tiene EV positivo. "
+            "Ojo: al combinarlas la probabilidad cae (se multiplican) y el riesgo sube — un parley largo rara vez conserva valor."
+        )
+
     with st.expander("¿De dónde salen estos números? (fuentes y modelos)"):
         st.markdown(
             """
@@ -408,21 +442,6 @@ def mostrar_analisis(a, ctx) -> None:
 - **Córners y tarjetas → Poisson** sobre los promedios de cada selección.
             """
         )
-
-
-@st.cache_data(show_spinner=False)
-def simular_cached(n: int):
-    from src.modelo.torneo import cargar_estado, simular
-    conn = connect(CFG.db_path)
-    estado = cargar_estado(conn, CFG.data_dir)
-    fifa = {api: r["fifa_code"] for api, r in estado[0].items()}
-    conn.close()
-    res = simular(estado, n)
-    filas = [
-        {"Equipo": fifa[api], "Avanza %": res["avanza"].get(api, 0) / n * 100, "Final %": res["finalista"].get(api, 0) / n * 100, "Campeón %": c / n * 100}
-        for api, c in sorted(res["campeon"].items(), key=lambda x: -x[1])
-    ]
-    return pd.DataFrame(filas)
 
 
 @st.cache_data(show_spinner=False)
@@ -462,7 +481,7 @@ def proximos_partidos():
 
 st.sidebar.title("⚽ Botano")
 st.sidebar.caption("Mundial 2026")
-pagina = st.sidebar.radio("Menú", ["Analizar partido", "Combinada", "Leer captura", "Simular torneo", "Mis apuestas / CLV", "Glosario"])
+pagina = st.sidebar.radio("Menú", ["Analizar partido", "Combinada", "Mis apuestas / CLV", "Glosario"])
 st.sidebar.caption("Herramienta de análisis, no garantía de ganancia.")
 
 
@@ -502,53 +521,10 @@ if pagina == "Analizar partido":
 
 elif pagina == "Combinada":
     st.title("Combinada (bet builder)")
-    st.caption("Cualquier mercado: 1X2, doble oportunidad, goles +/-, ambos anotan, córners +/-, tarjetas +/-. "
+    st.caption("Lee tu combinada desde una captura de Betano (recomendado) o ármala a mano. "
                "Dentro de un mismo partido se usa la correlación real (matriz Dixon-Coles para goles); córners y tarjetas se tratan como independientes.")
-    n = st.number_input("¿Cuántas selecciones?", 1, 8, 2)
-    seleccion = []
-    for i in range(int(n)):
-        st.markdown(f"**Selección {i + 1}**")
-        a1, a2, a3 = st.columns([1, 1, 1.4])
-        loc = a1.selectbox("Local", NOMBRES, index=0, key=f"l{i}")
-        vis = a2.selectbox("Visitante", NOMBRES, index=1, key=f"v{i}")
-        mer = a3.selectbox("Mercado", list(MERCADOS_COMBI), key=f"m{i}")
-        seleccion.append((EQUIPOS[loc], EQUIPOS[vis], mer))
-    cuota = st.number_input("Cuota combinada de Betano (0 = no la tengo)", 0.0, 10000.0, 0.0, step=0.05)
-    if st.button("Calcular", type="primary"):
-        grupos: dict = {}
-        for l, v, mer in seleccion:
-            grupos.setdefault((l, v), []).append(mer)
-        conn = connect(CFG.db_path)
-        p_corr, p_naive, fiable, filas, pares, ok = 1.0, 1.0, True, [], [], True
-        for (l, v), nombres in grupos.items():
-            a = analizar_1x2(conn, CFG.data_dir, l, v)
-            if a is None:
-                st.error(f"Sin datos para {l}-{v}.")
-                ok = False
-                break
-            specs = [MERCADOS_COMBI[nm] for nm in nombres]
-            corr, naive = _prob_partido_combi(a, specs)
-            p_corr *= corr
-            p_naive *= naive
-            fiable = fiable and a.fiable
-            for nm in nombres:
-                pares.append((f"{l}-{v}: {nm}", _prob_individual(a, MERCADOS_COMBI[nm])))
-            filas.append({"Partido": f"{a.nombre_local}-{a.nombre_visita}", "Selecciones": ", ".join(nombres), "Correcta": _pct(corr), "Naive": _pct(naive)})
-        conn.close()
-        if ok:
-            st.markdown("**Desglose: cómo baja con cada selección**")
-            st.table(_desglose(pares))
-            st.caption("Cada selección multiplica la probabilidad: el 'acumulado' muestra cómo cae al añadir cada una. El total ajusta además por la correlación entre los goles de un mismo partido.")
-            m1, m2 = st.columns(2)
-            m1.metric("Probabilidad combinada (correcta)", _pct(p_corr), f"naive (multiplicar marginales): {_pct(p_naive)}")
-            if cuota and cuota > 1:
-                m2.metric("Valor (EV)", f"{ev(p_corr, cuota):+.3f}" if fiable else "n/f")
-                st.caption(f"Cuota justa según el modelo: **{1 / p_corr:.2f}**. " + ("Tiene valor solo si tu cuota la supera." if fiable else "Algún partido es poco fiable vs el mercado (EV no válido)."))
-            st.info(f"**Por qué este número parece bajo:** una combinada se cumple solo si ocurren **todas** sus {len(seleccion)} selecciones, así que sus probabilidades **se multiplican**. Aunque cada pata sea muy probable, juntas lo son mucho menos. Por eso la cuota sube con cada selección — y el margen de la casa se acumula en cada una.")
 
-elif pagina == "Leer captura":
-    st.title("Leer combinada desde una captura")
-    st.caption("Sube una captura de tu combinada de Betano (de un solo partido). El bot detecta equipos y mercados con OCR; revisa y ajusta lo detectado antes de calcular.")
+    st.subheader("📷 Leer desde una captura")
     from streamlit_paste_button import paste_image_button
     pegar = paste_image_button("📋 Pegar captura (Ctrl+V)", errors="ignore")
     archivo = st.file_uploader("…o sube el archivo (PNG/JPG)", type=["png", "jpg", "jpeg"])
@@ -577,18 +553,18 @@ elif pagina == "Leer captura":
             with st.expander("Texto leído por el OCR (revisa si algo se detectó mal)"):
                 st.text(texto)
             if not local or not visita:
-                st.warning("No detecté dos equipos con claridad. Prueba con una captura más nítida o usa la pestaña **Combinada**.")
+                st.warning("No detecté dos equipos con claridad. Prueba con una captura más nítida o usa el modo manual de abajo.")
             else:
                 st.success(f"Detectado: **{local[1]} vs {visita[1]}** · {len(detectados)} mercado(s)")
                 cl = next((n for n in NOMBRES if EQUIPOS[n] == local[0]), NOMBRES[0])
                 cv = next((n for n in NOMBRES if EQUIPOS[n] == visita[0]), NOMBRES[1])
                 c1, c2 = st.columns(2)
-                loc = c1.selectbox("Local", NOMBRES, index=NOMBRES.index(cl))
-                vis = c2.selectbox("Visitante", NOMBRES, index=NOMBRES.index(cv))
+                loc = c1.selectbox("Local", NOMBRES, index=NOMBRES.index(cl), key="cap_l")
+                vis = c2.selectbox("Visitante", NOMBRES, index=NOMBRES.index(cv), key="cap_v")
                 pre = [m for m in detectados if m in MERCADOS_COMBI]
                 mer_sel = st.multiselect("Mercados (ajusta si el OCR falló)", list(MERCADOS_COMBI), default=pre, key="ms_" + local[0] + visita[0] + "_" + "_".join(pre))
-                cuota = st.number_input("Cuota combinada de Betano (0 = no la tengo)", 0.0, 10000.0, 0.0, step=0.05)
-                if st.button("Calcular", type="primary") and mer_sel:
+                cuota = st.number_input("Cuota combinada de Betano (0 = no la tengo)", 0.0, 10000.0, 0.0, step=0.05, key="cap_cuota")
+                if st.button("Calcular combinada", type="primary", key="cap_calc") and mer_sel:
                     conn = connect(CFG.db_path)
                     a = analizar_1x2(conn, CFG.data_dir, EQUIPOS[loc], EQUIPOS[vis])
                     conn.close()
@@ -605,18 +581,45 @@ elif pagina == "Leer captura":
                             st.metric("Valor (EV)", f"{ev(corr, cuota):+.3f}" if a.fiable else "n/f")
                         st.info(f"**Por qué parece bajo:** la combinada se cumple solo si ocurren **las {len(mer_sel)} selecciones a la vez**, así que sus probabilidades se multiplican. Cada pata añadida baja la probabilidad total y sube la cuota. Tiene valor solo si tu cuota supera la justa del modelo.")
 
-elif pagina == "Simular torneo":
-    st.title("Simulación del torneo")
-    st.caption("Probabilidad de avanzar y de ser campeón. P(avanza) es robusta; P(campeón) tiende a sobrevalorar (ver glosario).")
-    n = st.select_slider("Iteraciones", [2000, 5000, 10000, 20000], value=10000)
-    if st.button("Simular", type="primary"):
-        with st.spinner("Simulando el torneo..."):
-            df = simular_cached(int(n))
-        st.bar_chart(df.head(12).set_index("Equipo")["Campeón %"])
-        st.dataframe(
-            df.style.format({"Avanza %": "{:.1f}", "Final %": "{:.1f}", "Campeón %": "{:.1f}"}),
-            hide_index=True, use_container_width=True,
-        )
+    st.divider()
+    with st.expander("✍️ Armar la combinada manualmente (incluye varios partidos)"):
+        n = st.number_input("¿Cuántas selecciones?", 1, 8, 2, key="man_n")
+        seleccion = []
+        for i in range(int(n)):
+            st.markdown(f"**Selección {i + 1}**")
+            a1, a2, a3 = st.columns([1, 1, 1.4])
+            loc = a1.selectbox("Local", NOMBRES, index=0, key=f"l{i}")
+            vis = a2.selectbox("Visitante", NOMBRES, index=1, key=f"v{i}")
+            mer = a3.selectbox("Mercado", list(MERCADOS_COMBI), key=f"m{i}")
+            seleccion.append((EQUIPOS[loc], EQUIPOS[vis], mer))
+        cuota_m = st.number_input("Cuota combinada de Betano (0 = no la tengo)", 0.0, 10000.0, 0.0, step=0.05, key="man_cuota")
+        if st.button("Calcular", type="primary", key="man_calc"):
+            grupos: dict = {}
+            for l, v, mer in seleccion:
+                grupos.setdefault((l, v), []).append(mer)
+            conn = connect(CFG.db_path)
+            p_corr, p_naive, fiable, pares, ok = 1.0, 1.0, True, [], True
+            for (l, v), nombres in grupos.items():
+                a = analizar_1x2(conn, CFG.data_dir, l, v)
+                if a is None:
+                    st.error(f"Sin datos para {l}-{v}.")
+                    ok = False
+                    break
+                corr, naive = _prob_partido_combi(a, [MERCADOS_COMBI[nm] for nm in nombres])
+                p_corr *= corr
+                p_naive *= naive
+                fiable = fiable and a.fiable
+                for nm in nombres:
+                    pares.append((f"{l}-{v}: {nm}", _prob_individual(a, MERCADOS_COMBI[nm])))
+            conn.close()
+            if ok:
+                st.markdown("**Desglose: cómo baja con cada selección**")
+                st.table(_desglose(pares))
+                m1, m2 = st.columns(2)
+                m1.metric("Probabilidad combinada (correcta)", _pct(p_corr), f"naive: {_pct(p_naive)}")
+                if cuota_m and cuota_m > 1:
+                    m2.metric("Valor (EV)", f"{ev(p_corr, cuota_m):+.3f}" if fiable else "n/f")
+                    st.caption(f"Cuota justa según el modelo: **{1 / p_corr:.2f}**. " + ("Tiene valor solo si tu cuota la supera." if fiable else "Algún partido es poco fiable vs el mercado (EV no válido)."))
 
 elif pagina == "Mis apuestas / CLV":
     st.title("Mis apuestas y CLV")
