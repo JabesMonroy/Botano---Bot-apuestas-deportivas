@@ -24,7 +24,7 @@ def main(fifa: str) -> int:
         conn.close()
         return 1
 
-    kader = [(n, v) for n, v in Transfermarkt(cfg.cache_dir).kader(eq["transfermarkt_id"]) if v]
+    kader = [(n, v) for n, _pos, v in Transfermarkt(cfg.cache_dir).kader(eq["transfermarkt_id"]) if v]
     fd = FootballData(cfg.football_data_key, cfg.cache_dir / "football_data").equipo(eq["football_data_id"])
     conn.close()
 

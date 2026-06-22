@@ -70,13 +70,16 @@ class Transfermarkt:
         destino.write_text(r.text, encoding="utf-8")
         return r.text
 
-    def kader(self, verein_id: int) -> list[tuple[str, float | None]]:
+    def kader(self, verein_id: int) -> list[tuple[str, str, float | None]]:
         soup = BeautifulSoup(self._html_kader(verein_id), "lxml")
         out = []
         for tr in soup.select("table.items > tbody > tr"):
             a = tr.select_one("td.hauptlink a") or tr.select_one('a[href*="/profil/spieler/"]')
             if not a or not a.get_text(strip=True):
                 continue
+            inl = tr.select_one("table.inline-table")
+            celdas = [td.get_text(strip=True) for td in inl.select("tr td") if td.get_text(strip=True)] if inl else []
+            posicion = celdas[-1] if celdas else ""
             euros = [v for v in (_num(td.get_text()) for td in tr.select("td") if "€" in td.get_text()) if v]
-            out.append((a.get_text(strip=True), euros[-1] if euros else None))
+            out.append((a.get_text(strip=True), posicion, euros[-1] if euros else None))
         return out

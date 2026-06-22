@@ -16,16 +16,33 @@ def _norm(t: str) -> str:
     return unicodedata.normalize("NFKD", t or "").encode("ascii", "ignore").decode().strip().lower()
 
 
-def _mult(cfg, tm_id, valor_total, fuera) -> float:
+def _clasif(pos: str) -> str:
+    if any(d in pos for d in ("Goalkeeper", "Back", "Defensive Midfield")):
+        return "def"
+    if any(o in pos for o in ("Winger", "Forward", "Striker", "Attacking Midfield")):
+        return "of"
+    return "mix"
+
+
+def _mults(cfg, tm_id, valor_total, fuera) -> tuple[float, float]:
     if not fuera or not tm_id or not valor_total:
-        return 1.0
+        return 1.0, 1.0
     objetivo = [_norm(x) for x in fuera if x]
-    kader = Transfermarkt(cfg.cache_dir).kader(tm_id)
-    val = sum(
-        v for n, v in kader
-        if v and any(o == _norm(n).split()[-1] or o in _norm(n) for o in objetivo)
-    )
-    return max(1.0 - K * (val / valor_total), 0.4)
+    ofensivo = defensivo = 0.0
+    for n, pos, v in Transfermarkt(cfg.cache_dir).kader(tm_id):
+        if not v or not any(o == _norm(n).split()[-1] or o in _norm(n) for o in objetivo):
+            continue
+        c = _clasif(pos)
+        if c == "of":
+            ofensivo += v
+        elif c == "def":
+            defensivo += v
+        else:
+            ofensivo += v / 2
+            defensivo += v / 2
+    mult_ataque = max(1.0 - K * (ofensivo / valor_total), 0.4)
+    mult_defensa = min(1.0 + K * (defensivo / valor_total), 1.6)
+    return mult_ataque, mult_defensa
 
 
 def _fila(a, local, visita):
@@ -45,18 +62,19 @@ def main(local: str, visita: str, fuera_local: list[str], fuera_visita: list[str
         conn.close()
         return 1
 
-    ml = _mult(cfg, info[local]["transfermarkt_id"], info[local]["valor_plantilla"], fuera_local)
-    mv = _mult(cfg, info[visita]["transfermarkt_id"], info[visita]["valor_plantilla"], fuera_visita)
+    la_atk, la_def = _mults(cfg, info[local]["transfermarkt_id"], info[local]["valor_plantilla"], fuera_local)
+    lv_atk, lv_def = _mults(cfg, info[visita]["transfermarkt_id"], info[visita]["valor_plantilla"], fuera_visita)
 
     base = analizar_1x2(conn, cfg.data_dir, local, visita)
-    ajustado = analizar_1x2(conn, cfg.data_dir, local, visita, Ajustes(ataque_local=ml, ataque_visita=mv))
+    ajustes = Ajustes(ataque_local=la_atk, defensa_local=la_def, ataque_visita=lv_atk, defensa_visita=lv_def)
+    ajustado = analizar_1x2(conn, cfg.data_dir, local, visita, ajustes)
     conn.close()
     if base is None or ajustado is None:
         print("no se pudo analizar")
         return 1
 
     print(f"{base.nombre_local} vs {base.nombre_visita}")
-    print(f"ajuste ataque por bajas: {local} x{ml:.2f}  {visita} x{mv:.2f}")
+    print(f"ajuste por bajas: {local} ataque x{la_atk:.2f} defensa x{la_def:.2f} | {visita} ataque x{lv_atk:.2f} defensa x{lv_def:.2f}")
     print(f"  sin bajas:  {_fila(base, local, visita)}  | goles esp. {base.lh + base.la:.2f}")
     print(f"  con bajas:  {_fila(ajustado, local, visita)}  | goles esp. {ajustado.lh + ajustado.la:.2f}")
     return 0
