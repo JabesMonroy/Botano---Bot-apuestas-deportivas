@@ -55,12 +55,28 @@ def _estilo(p) -> str:
     elif xg >= 1.5:
         rasgos.append("ofensivo")
     elif xg < 1.1:
-        rasgos.append("poco productivo en ataque")
+        rasgos.append("conservador en ataque")
     if xga <= 0.8:
         rasgos.append("sólido en defensa")
     elif xga >= 1.4:
         rasgos.append("frágil atrás")
+    if xg + xga >= 3.0:
+        rasgos.append("partidos abiertos")
+    elif xg + xga <= 2.0:
+        rasgos.append("partidos cerrados")
     return ", ".join(rasgos) if rasgos else "equilibrado"
+
+
+def _over_equipo(matriz, eje: int, linea: float) -> float:
+    marg = matriz.sum(axis=1) if eje == 0 else matriz.sum(axis=0)
+    return float(marg[int(linea) + 1:].sum())
+
+
+def _primer_gol(lh: float, la: float, p00: float):
+    tot = lh + la
+    if tot <= 0:
+        return 0.0, 0.0, 1.0
+    return (lh / tot) * (1 - p00), (la / tot) * (1 - p00), p00
 
 
 def _ajustes_por_bajas(local: str, visita: str):
@@ -118,6 +134,11 @@ def mostrar_analisis(a, ctx) -> None:
             hide_index=True, use_container_width=True,
         )
         der.caption("Resultados y tabla: football-data.org")
+
+    st.caption(
+        f"**Planteamiento esperado** (inferido del estilo de juego con datos reales, no declarado por el técnico): "
+        f"{a.nombre_local} → _{_estilo(pl)}_  ·  {a.nombre_visita} → _{_estilo(pv)}_"
+    )
 
     st.markdown("**Pronóstico (resultado del partido)**")
     clave = {"1": a.local, "X": "X", "2": a.visita}
@@ -190,6 +211,18 @@ def mostrar_analisis(a, ctx) -> None:
         ot = over_under(a.tarjetas_esp, [1.5, 2.5, 3.5, 4.5, 5.5])
         col_t.markdown("**Tarjetas totales**")
         col_t.table(pd.DataFrame([{"Línea": f"Más de {l}", "Prob.": _pct(p)} for l, p in ot.items()]))
+
+    st.markdown("####  Goles por equipo y primer gol")
+    eq1, eq2, eq3 = st.columns(3)
+    eq1.markdown(f"**{a.nombre_local} marca…**")
+    eq1.table(pd.DataFrame([{"Línea": f"Más de {x}", "Prob.": _pct(_over_equipo(a.matriz, 0, x))} for x in (0.5, 1.5, 2.5)]))
+    eq2.markdown(f"**{a.nombre_visita} marca…**")
+    eq2.table(pd.DataFrame([{"Línea": f"Más de {x}", "Prob.": _pct(_over_equipo(a.matriz, 1, x))} for x in (0.5, 1.5, 2.5)]))
+    p_local, p_visita, p_sin = _primer_gol(a.lh, a.la, float(a.matriz[0, 0]))
+    eq3.markdown("**¿Quién marca primero?**")
+    eq3.metric(a.nombre_local, _pct(p_local))
+    eq3.metric(a.nombre_visita, _pct(p_visita))
+    eq3.caption(f"Ningún gol: {_pct(p_sin)} · estimado por el ritmo goleador de cada equipo (modelo de Poisson en el tiempo).")
 
     tot = a.lh + a.la
     tend = "tiende a pocos goles" if tot < 2.3 else ("tiende a muchos goles" if tot > 2.9 else "tendencia media de goles")
