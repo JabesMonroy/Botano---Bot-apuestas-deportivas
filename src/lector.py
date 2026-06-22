@@ -67,35 +67,30 @@ def _sel_linea(sel: str, palabra: str, lineas_o: list[float], lineas_u: list[flo
 
 
 def analizar(texto: str, equipos):
-    lineas = [l.strip() for l in texto.splitlines() if l.strip()]
+    t = _norm(texto)
     local, visita = _detectar_equipos(texto, equipos)
     mercados = []
-    for i, linea in enumerate(lineas):
-        tipo = _norm(linea)
-        sel = _norm(lineas[i - 1]) if i > 0 else ""
-        m = None
-        if "resultado del partido" in tipo:
-            fifa = _equipo_de(sel, equipos)
-            if local and fifa == local[0]:
-                m = "Gana local"
-            elif visita and fifa == visita[0]:
-                m = "Gana visita"
-            elif "empate" in sel:
-                m = "Empate"
-        elif "proximo gol" in tipo or "gol 1" in tipo or "primer gol" in tipo:
-            fifa = _equipo_de(sel, equipos)
-            if local and fifa == local[0]:
-                m = "Primer gol: local"
-            elif visita and fifa == visita[0]:
-                m = "Primer gol: visita"
-        elif "esquina" in tipo or "corner" in tipo:
-            m = _sel_linea(sel, "córners", CORNERS, CORNERS)
-        elif "tarjeta" in tipo:
-            m = _sel_linea(sel, "tarjetas", TARJETAS_O, TARJETAS_U)
-        elif "gol" in tipo and "total" in tipo:
-            m = _sel_linea(sel, "goles", GOLES, GOLES)
-        elif "ambos" in tipo:
-            m = "Ambos anotan"
-        if m:
-            mercados.append(m)
+
+    for nombre_norm, fifa, _disp in equipos:
+        lado = "l" if (local and fifa == local[0]) else ("v" if (visita and fifa == visita[0]) else None)
+        if lado is None:
+            continue
+        if re.search(rf"{re.escape(nombre_norm)}\s+resultado del partido", t):
+            mercados.append("Gana local" if lado == "l" else "Gana visita")
+        if re.search(rf"{re.escape(nombre_norm)}\s+(?:proximo|primer) gol", t):
+            mercados.append("Primer gol: local" if lado == "l" else "Primer gol: visita")
+    if re.search(r"empate\s+resultado del partido", t):
+        mercados.append("Empate")
+    if re.search(r"ambos\s+(?:equipos\s+)?(?:anotan|marcan)", t):
+        mercados.append("Ambos anotan")
+
+    def _ou(patron: str, palabra: str, lo, lu):
+        for m in re.finditer(rf"(mas|menos)\s*(?:de\s*)?(\d+)[.,\s]*5?\s+{patron}", t):
+            linea = _linea_cercana(int(m.group(2)), lo if m.group(1) == "mas" else lu)
+            if linea is not None:
+                mercados.append(f"{'Más' if m.group(1) == 'mas' else 'Menos'} de {linea} {palabra}")
+
+    _ou(r"tarjetas?", "tarjetas", TARJETAS_O, TARJETAS_U)
+    _ou(r"goles?\s+total", "goles", GOLES, GOLES)
+    _ou(r"(?:tiros de esquina|corner)", "córners", CORNERS, CORNERS)
     return local, visita, list(dict.fromkeys(mercados))

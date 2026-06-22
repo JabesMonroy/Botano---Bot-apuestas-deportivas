@@ -439,6 +439,27 @@ def equipos_busqueda():
     return out
 
 
+@st.cache_data(ttl=600, show_spinner=False)
+def proximos_partidos():
+    from datetime import date
+
+    conn = connect(CFG.db_path)
+    filas = conn.execute(
+        "SELECT p.fecha, el.fifa_code lf, el.nombre ln, ev.fifa_code vf, ev.nombre vn "
+        "FROM partidos p JOIN equipos el ON p.equipo_local_id=el.id "
+        "JOIN equipos ev ON p.equipo_visita_id=ev.id "
+        "WHERE p.estado IN ('TIMED','SCHEDULED') ORDER BY p.fecha"
+    ).fetchall()
+    conn.close()
+    hoy = date.today().isoformat()
+    out = []
+    for r in filas:
+        f = r["fecha"] or ""
+        etiqueta = ("🔴 HOY · " if f[:10] == hoy else f"{f[:10]} · ") + f"{f[11:16]} {r['ln']} vs {r['vn']}"
+        out.append((etiqueta, r["lf"], r["vf"]))
+    return out
+
+
 st.sidebar.title("⚽ Botano")
 st.sidebar.caption("Mundial 2026")
 pagina = st.sidebar.radio("Menú", ["Analizar partido", "Combinada", "Leer captura", "Simular torneo", "Mis apuestas / CLV", "Glosario"])
@@ -447,9 +468,18 @@ st.sidebar.caption("Herramienta de análisis, no garantía de ganancia.")
 
 if pagina == "Analizar partido":
     st.title("Analizar partido")
+    prox = proximos_partidos()
+    li, vi = 0, 1
+    if prox:
+        opc = ["(elegir manualmente)"] + [p[0] for p in prox]
+        elegido = st.selectbox("⚡ Próximos partidos del Mundial (elige uno y se rellenan los equipos)", opc)
+        if elegido != "(elegir manualmente)":
+            _, lf, vf = prox[opc.index(elegido) - 1]
+            li = next((k for k, nom in enumerate(NOMBRES) if EQUIPOS[nom] == lf), 0)
+            vi = next((k for k, nom in enumerate(NOMBRES) if EQUIPOS[nom] == vf), 1)
     c1, c2 = st.columns(2)
-    local = c1.selectbox("Local", NOMBRES, index=0)
-    visita = c2.selectbox("Visitante", NOMBRES, index=1)
+    local = c1.selectbox("Local", NOMBRES, index=li)
+    visita = c2.selectbox("Visitante", NOMBRES, index=vi)
     descontar = st.checkbox("Descontar bajas automáticamente (consulta internet)")
     if st.button("Analizar", type="primary"):
         l, v = EQUIPOS[local], EQUIPOS[visita]
