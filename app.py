@@ -174,6 +174,13 @@ def mostrar_analisis(a, ctx) -> None:
     if a.novig and not a.fiable:
         st.warning(f"El modelo difiere {a.divergencia * 100:.0f}pp del mercado: poco fiable, no apostar por esa diferencia.")
 
+    st.markdown("**Doble oportunidad** (se cubren dos de los tres resultados)")
+    d1, d2, d3 = st.columns(3)
+    d1.metric(f"{a.nombre_local} o empate", _pct(a.modelo["1"] + a.modelo["X"]))
+    d2.metric(f"Empate o {a.nombre_visita}", _pct(a.modelo["X"] + a.modelo["2"]))
+    d3.metric(f"{a.nombre_local} o {a.nombre_visita}", _pct(a.modelo["1"] + a.modelo["2"]))
+    st.caption("Sale de la **misma matriz Dixon-Coles** del modelo (no es una media): se suman las probabilidades de los dos resultados que cubre cada apuesta.")
+
     st.markdown("####  Interpretación")
     st.markdown(narrativa(a))
 
@@ -198,19 +205,22 @@ def mostrar_analisis(a, ctx) -> None:
             s2.caption(" · ".join(f"+{l}: {_pct(p)}" for l, p in o.items()))
         st.caption("Modelo **Poisson** sobre los promedios recientes de cada selección (fuente de los promedios: Footystats). '+9.5' = 10 o más.")
 
-    st.markdown("####  Probabilidades por línea")
+    st.markdown("####  Probabilidades por línea (más de / menos de)")
     col_g, col_c, col_t = st.columns(3)
     dist = _dist_goles(a.matriz)
     col_g.markdown("**Goles totales**")
-    col_g.table(pd.DataFrame([{"Línea": f"Más de {x}", "Prob.": _pct(float(dist[int(x) + 1:].sum()))} for x in (0.5, 1.5, 2.5, 3.5, 4.5)]))
+    col_g.table(pd.DataFrame([
+        {"Línea": x, "Más de": _pct(float(dist[int(x) + 1:].sum())), "Menos de": _pct(1 - float(dist[int(x) + 1:].sum()))}
+        for x in (0.5, 1.5, 2.5, 3.5, 4.5)
+    ]))
     if a.corners_esp:
         oc = over_under(a.corners_esp, [6.5, 7.5, 8.5, 9.5, 10.5, 11.5])
         col_c.markdown("**Córners totales**")
-        col_c.table(pd.DataFrame([{"Línea": f"Más de {l}", "Prob.": _pct(p)} for l, p in oc.items()]))
+        col_c.table(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in oc.items()]))
     if a.tarjetas_esp:
-        ot = over_under(a.tarjetas_esp, [1.5, 2.5, 3.5, 4.5, 5.5])
+        ot = over_under(a.tarjetas_esp, [0.5, 1.5, 2.5, 3.5, 4.5, 5.5])
         col_t.markdown("**Tarjetas totales**")
-        col_t.table(pd.DataFrame([{"Línea": f"Más de {l}", "Prob.": _pct(p)} for l, p in ot.items()]))
+        col_t.table(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in ot.items()]))
 
     st.markdown("####  Goles por equipo y primer gol")
     eq1, eq2, eq3 = st.columns(3)
