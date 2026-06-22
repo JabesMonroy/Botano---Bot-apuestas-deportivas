@@ -106,7 +106,7 @@ def analizar_1x2(conn: sqlite3.Connection, data_dir: Path, local: str, visita: s
 
 def contexto_partido(conn: sqlite3.Connection, local: str, visita: str) -> dict | None:
     row = conn.execute(
-        "SELECT p.fecha, p.fase, p.grupo, p.estado FROM partidos p "
+        "SELECT p.fecha, p.fase, p.grupo, p.estado, p.arbitro FROM partidos p "
         "JOIN equipos el ON p.equipo_local_id=el.id JOIN equipos ev ON p.equipo_visita_id=ev.id "
         "WHERE el.fifa_code=? AND ev.fifa_code=?",
         (local, visita),
@@ -118,7 +118,7 @@ def contexto_partido(conn: sqlite3.Connection, local: str, visita: str) -> dict 
         "FROM standings s JOIN equipos e ON s.equipo_id=e.id WHERE s.grupo=? ORDER BY s.posicion",
         (row["grupo"],),
     ).fetchall()
-    return {"fecha": row["fecha"], "fase": row["fase"], "grupo": row["grupo"], "estado": row["estado"], "standings": standings}
+    return {"fecha": row["fecha"], "fase": row["fase"], "grupo": row["grupo"], "estado": row["estado"], "arbitro": row["arbitro"], "standings": standings}
 
 
 def nivel_confianza(a: Analisis) -> str:

@@ -47,6 +47,7 @@ def ingestar_partidos(conn: sqlite3.Connection, fd: FootballData) -> int:
         visita = por_fd.get((m.get("awayTeam") or {}).get("id"))
         if local is None or visita is None:
             continue
+        arbitro = ((m.get("referees") or [{}])[0] or {}).get("name")
         filas.append(
             (
                 m.get("id"),
@@ -55,20 +56,22 @@ def ingestar_partidos(conn: sqlite3.Connection, fd: FootballData) -> int:
                 visita,
                 m.get("stage"),
                 _grupo(m.get("group")),
+                arbitro,
                 m.get("status"),
                 ahora,
             )
         )
     sql = """
         INSERT INTO partidos (
-            football_data_id, fecha, equipo_local_id, equipo_visita_id, fase, grupo, estado, actualizado
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            football_data_id, fecha, equipo_local_id, equipo_visita_id, fase, grupo, arbitro, estado, actualizado
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(football_data_id) DO UPDATE SET
             fecha = excluded.fecha,
             equipo_local_id = excluded.equipo_local_id,
             equipo_visita_id = excluded.equipo_visita_id,
             fase = excluded.fase,
             grupo = excluded.grupo,
+            arbitro = excluded.arbitro,
             estado = excluded.estado,
             actualizado = excluded.actualizado
     """

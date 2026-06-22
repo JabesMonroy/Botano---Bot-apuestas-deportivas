@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -38,6 +39,30 @@ def _pct(x) -> str:
     return f"{x * 100:.1f}%" if x is not None else "—"
 
 
+def _dist_goles(matriz):
+    n = matriz.shape[0]
+    i, j = np.meshgrid(np.arange(n), np.arange(n), indexing="ij")
+    return np.bincount((i + j).ravel(), weights=matriz.ravel())
+
+
+def _estilo(p) -> str:
+    xg, xga = p.get("xg_fs"), p.get("xga_fs")
+    if not xg or not xga:
+        return "estilo no disponible"
+    rasgos = []
+    if xg >= 1.9:
+        rasgos.append("muy ofensivo")
+    elif xg >= 1.5:
+        rasgos.append("ofensivo")
+    elif xg < 1.1:
+        rasgos.append("poco productivo en ataque")
+    if xga <= 0.8:
+        rasgos.append("sólido en defensa")
+    elif xga >= 1.4:
+        rasgos.append("frágil atrás")
+    return ", ".join(rasgos) if rasgos else "equilibrado"
+
+
 def _ajustes_por_bajas(local: str, visita: str):
     conn = connect(CFG.db_path)
     info = {
@@ -65,7 +90,8 @@ def mostrar_analisis(a, ctx) -> None:
     st.subheader(f"{a.nombre_local}  vs  {a.nombre_visita}")
     if ctx:
         fecha = ctx["fecha"][:16].replace("T", " ") if ctx["fecha"] else "?"
-        st.caption(f"Grupo {ctx['grupo']} · {fecha} · {ctx['estado']}")
+        arb = f" · Árbitro: {ctx['arbitro']}" if ctx.get("arbitro") else ""
+        st.caption(f"Grupo {ctx['grupo']} · {fecha} · {ctx['estado']}{arb}")
 
     izq, der = st.columns(2)
     pl, pv = a.perfil_local, a.perfil_visita
@@ -150,6 +176,31 @@ def mostrar_analisis(a, ctx) -> None:
             s2.metric("Tarjetas esperadas", f"{a.tarjetas_esp:.1f}")
             s2.caption(" · ".join(f"+{l}: {_pct(p)}" for l, p in o.items()))
         st.caption("Modelo **Poisson** sobre los promedios recientes de cada selección (fuente de los promedios: Footystats). '+9.5' = 10 o más.")
+
+    st.markdown("####  Probabilidades por línea")
+    col_g, col_c, col_t = st.columns(3)
+    dist = _dist_goles(a.matriz)
+    col_g.markdown("**Goles totales**")
+    col_g.table(pd.DataFrame([{"Línea": f"Más de {x}", "Prob.": _pct(float(dist[int(x) + 1:].sum()))} for x in (0.5, 1.5, 2.5, 3.5, 4.5)]))
+    if a.corners_esp:
+        oc = over_under(a.corners_esp, [6.5, 7.5, 8.5, 9.5, 10.5, 11.5])
+        col_c.markdown("**Córners totales**")
+        col_c.table(pd.DataFrame([{"Línea": f"Más de {l}", "Prob.": _pct(p)} for l, p in oc.items()]))
+    if a.tarjetas_esp:
+        ot = over_under(a.tarjetas_esp, [1.5, 2.5, 3.5, 4.5, 5.5])
+        col_t.markdown("**Tarjetas totales**")
+        col_t.table(pd.DataFrame([{"Línea": f"Más de {l}", "Prob.": _pct(p)} for l, p in ot.items()]))
+
+    tot = a.lh + a.la
+    tend = "tiende a pocos goles" if tot < 2.3 else ("tiende a muchos goles" if tot > 2.9 else "tendencia media de goles")
+    just = f"**Goles**: con {tot:.1f} esperados, el partido {tend}; por eso las líneas bajas son casi seguras y las altas caen rápido. "
+    just += f"**Córners**: {a.nombre_local} es {_estilo(pl)} y {a.nombre_visita} es {_estilo(pv)} — cuanto más ofensivo y dominante, más córners. "
+    just += "**Tarjetas**: suben con la intensidad del partido y con el criterio del árbitro"
+    if ctx and ctx.get("arbitro"):
+        just += f" (designado: **{ctx['arbitro']}**; su tendencia exacta conviene mirarla aparte)."
+    else:
+        just += " (árbitro aún sin designar)."
+    st.caption(just)
 
     st.info(f"Confianza del análisis: **{nivel_confianza(a)}**")
 
