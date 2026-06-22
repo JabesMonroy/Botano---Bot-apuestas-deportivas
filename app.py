@@ -485,7 +485,8 @@ elif pagina == "Combinada":
             m1.metric("Probabilidad combinada (correcta)", _pct(p_corr), f"naive (multiplicar marginales): {_pct(p_naive)}")
             if cuota and cuota > 1:
                 m2.metric("Valor (EV)", f"{ev(p_corr, cuota):+.3f}" if fiable else "n/f")
-                st.caption(f"Cuota justa según el modelo: **{1 / p_corr:.2f}**. " + ("Tiene valor si tu cuota la supera." if fiable else "Algún partido es poco fiable vs el mercado (EV no válido)."))
+                st.caption(f"Cuota justa según el modelo: **{1 / p_corr:.2f}**. " + ("Tiene valor solo si tu cuota la supera." if fiable else "Algún partido es poco fiable vs el mercado (EV no válido)."))
+            st.info(f"**Por qué este número parece bajo:** una combinada se cumple solo si ocurren **todas** sus {len(seleccion)} selecciones, así que sus probabilidades **se multiplican**. Aunque cada pata sea muy probable, juntas lo son mucho menos. Por eso la cuota sube con cada selección — y el margen de la casa se acumula en cada una.")
 
 elif pagina == "Leer captura":
     st.title("Leer combinada desde una captura")
@@ -527,6 +528,7 @@ elif pagina == "Leer captura":
                         m2.metric("Cuota justa del modelo", f"{1 / corr:.2f}" if corr > 0 else "—")
                         if cuota and cuota > 1:
                             st.metric("Valor (EV)", f"{ev(corr, cuota):+.3f}" if a.fiable else "n/f")
+                        st.info(f"**Por qué parece bajo:** la combinada se cumple solo si ocurren **las {len(mer_sel)} selecciones a la vez**, así que sus probabilidades se multiplican. Cada pata añadida baja la probabilidad total y sube la cuota. Tiene valor solo si tu cuota supera la justa del modelo.")
 
 elif pagina == "Simular torneo":
     st.title("Simulación del torneo")
