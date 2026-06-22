@@ -561,7 +561,11 @@ elif pagina == "Leer captura":
     elif archivo:
         imagen_bytes = archivo.getvalue()
     if imagen_bytes:
-        from src.lector import analizar, ocr
+        import importlib
+
+        import src.lector as _lector
+        importlib.reload(_lector)
+        analizar, ocr = _lector.analizar, _lector.ocr
         try:
             with st.spinner("Leyendo la imagen con OCR de Windows..."):
                 texto = ocr(imagen_bytes)
@@ -581,7 +585,8 @@ elif pagina == "Leer captura":
                 c1, c2 = st.columns(2)
                 loc = c1.selectbox("Local", NOMBRES, index=NOMBRES.index(cl))
                 vis = c2.selectbox("Visitante", NOMBRES, index=NOMBRES.index(cv))
-                mer_sel = st.multiselect("Mercados (ajusta si el OCR falló)", list(MERCADOS_COMBI), default=[m for m in detectados if m in MERCADOS_COMBI])
+                pre = [m for m in detectados if m in MERCADOS_COMBI]
+                mer_sel = st.multiselect("Mercados (ajusta si el OCR falló)", list(MERCADOS_COMBI), default=pre, key="ms_" + local[0] + visita[0] + "_" + "_".join(pre))
                 cuota = st.number_input("Cuota combinada de Betano (0 = no la tengo)", 0.0, 10000.0, 0.0, step=0.05)
                 if st.button("Calcular", type="primary") and mer_sel:
                     conn = connect(CFG.db_path)
