@@ -28,11 +28,47 @@ def cargar_equipos():
 
 EQUIPOS = cargar_equipos()
 NOMBRES = list(EQUIPOS)
-MERCADOS = {
-    "Gana local": "1", "Empate": "X", "Gana visita": "2",
-    "Más de 2.5 goles": "over2.5", "Menos de 2.5 goles": "under2.5",
-    "Ambos anotan": "btts", "No ambos anotan": "nobtts",
+MERCADOS_COMBI = {
+    "Gana local": ("g", "1"),
+    "Empate": ("g", "X"),
+    "Gana visita": ("g", "2"),
+    "Local o empate (1X)": ("g", "1X"),
+    "Empate o visita (X2)": ("g", "X2"),
+    "Local o visita, no empate (12)": ("g", "12"),
+    "Más de 1.5 goles": ("g", "over1.5"),
+    "Menos de 1.5 goles": ("g", "under1.5"),
+    "Más de 2.5 goles": ("g", "over2.5"),
+    "Menos de 2.5 goles": ("g", "under2.5"),
+    "Más de 3.5 goles": ("g", "over3.5"),
+    "Ambos anotan": ("g", "btts"),
+    "No ambos anotan": ("g", "nobtts"),
+    "Más de 8.5 córners": ("c", 8.5, "o"),
+    "Menos de 8.5 córners": ("c", 8.5, "u"),
+    "Más de 9.5 córners": ("c", 9.5, "o"),
+    "Menos de 9.5 córners": ("c", 9.5, "u"),
+    "Más de 10.5 córners": ("c", 10.5, "o"),
+    "Más de 3.5 tarjetas": ("t", 3.5, "o"),
+    "Menos de 3.5 tarjetas": ("t", 3.5, "u"),
+    "Más de 4.5 tarjetas": ("t", 4.5, "o"),
+    "Menos de 4.5 tarjetas": ("t", 4.5, "u"),
 }
+
+
+def _prob_partido_combi(a, mercados):
+    goles = [m[1] for m in mercados if m[0] == "g"]
+    p_corr = prob_conjunta(a.matriz, goles) if goles else 1.0
+    p_naive = 1.0
+    for g in goles:
+        p_naive *= prob_marginal(a.matriz, g)
+    extra = 1.0
+    for m in mercados:
+        if m[0] == "c" and a.corners_esp:
+            ov = over_under(a.corners_esp, [m[1]])[m[1]]
+            extra *= ov if m[2] == "o" else (1 - ov)
+        elif m[0] == "t" and a.tarjetas_esp:
+            ov = over_under(a.tarjetas_esp, [m[1]])[m[1]]
+            extra *= ov if m[2] == "o" else (1 - ov)
+    return p_corr * extra, p_naive * extra
 
 
 def _pct(x) -> str:
@@ -365,45 +401,44 @@ if pagina == "Analizar partido":
 
 elif pagina == "Combinada":
     st.title("Combinada (bet builder)")
-    st.caption("Calcula la probabilidad real teniendo en cuenta la correlación entre selecciones del mismo partido.")
-    n = st.number_input("¿Cuántas selecciones?", 1, 6, 2)
+    st.caption("Cualquier mercado: 1X2, doble oportunidad, goles +/-, ambos anotan, córners +/-, tarjetas +/-. "
+               "Dentro de un mismo partido se usa la correlación real (matriz Dixon-Coles para goles); córners y tarjetas se tratan como independientes.")
+    n = st.number_input("¿Cuántas selecciones?", 1, 8, 2)
     seleccion = []
     for i in range(int(n)):
         st.markdown(f"**Selección {i + 1}**")
-        a1, a2, a3 = st.columns(3)
+        a1, a2, a3 = st.columns([1, 1, 1.4])
         loc = a1.selectbox("Local", NOMBRES, index=0, key=f"l{i}")
         vis = a2.selectbox("Visitante", NOMBRES, index=1, key=f"v{i}")
-        mer = a3.selectbox("Mercado", list(MERCADOS), key=f"m{i}")
-        seleccion.append((EQUIPOS[loc], EQUIPOS[vis], MERCADOS[mer]))
+        mer = a3.selectbox("Mercado", list(MERCADOS_COMBI), key=f"m{i}")
+        seleccion.append((EQUIPOS[loc], EQUIPOS[vis], mer))
     cuota = st.number_input("Cuota combinada de Betano (0 = no la tengo)", 0.0, 10000.0, 0.0, step=0.05)
     if st.button("Calcular", type="primary"):
         grupos: dict = {}
-        for l, v, m in seleccion:
-            grupos.setdefault((l, v), []).append(m)
+        for l, v, mer in seleccion:
+            grupos.setdefault((l, v), []).append(mer)
         conn = connect(CFG.db_path)
         p_corr, p_naive, fiable, filas, ok = 1.0, 1.0, True, [], True
-        for (l, v), mercados in grupos.items():
+        for (l, v), nombres in grupos.items():
             a = analizar_1x2(conn, CFG.data_dir, l, v)
             if a is None:
                 st.error(f"Sin datos para {l}-{v}.")
                 ok = False
                 break
-            marg = {m: prob_marginal(a.matriz, m) for m in mercados}
-            conj = prob_conjunta(a.matriz, mercados)
-            naive = 1.0
-            for m in mercados:
-                naive *= marg[m]
-            p_corr *= conj
+            specs = [MERCADOS_COMBI[nm] for nm in nombres]
+            corr, naive = _prob_partido_combi(a, specs)
+            p_corr *= corr
             p_naive *= naive
             fiable = fiable and a.fiable
-            filas.append({"Partido": f"{a.nombre_local}-{a.nombre_visita}", "Mercados": ", ".join(mercados), "Correcta": _pct(conj), "Naive": _pct(naive)})
+            filas.append({"Partido": f"{a.nombre_local}-{a.nombre_visita}", "Selecciones": ", ".join(nombres), "Correcta": _pct(corr), "Naive": _pct(naive)})
         conn.close()
         if ok:
             st.dataframe(pd.DataFrame(filas), hide_index=True, use_container_width=True)
             m1, m2 = st.columns(2)
-            m1.metric("Probabilidad combinada (correcta)", _pct(p_corr), f"naive: {_pct(p_naive)}")
+            m1.metric("Probabilidad combinada (correcta)", _pct(p_corr), f"naive (multiplicar marginales): {_pct(p_naive)}")
             if cuota and cuota > 1:
                 m2.metric("Valor (EV)", f"{ev(p_corr, cuota):+.3f}" if fiable else "n/f")
+                st.caption(f"Cuota justa según el modelo: **{1 / p_corr:.2f}**. " + ("Tiene valor si tu cuota la supera." if fiable else "Algún partido es poco fiable vs el mercado (EV no válido)."))
 
 elif pagina == "Simular torneo":
     st.title("Simulación del torneo")
