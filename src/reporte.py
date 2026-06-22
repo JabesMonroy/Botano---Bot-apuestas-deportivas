@@ -36,13 +36,16 @@ class Analisis:
     matriz: np.ndarray
     corners_esp: float | None
     tarjetas_esp: float | None
+    perfil_local: dict
+    perfil_visita: dict
 
 
 def analizar_1x2(conn: sqlite3.Connection, data_dir: Path, local: str, visita: str, ajustes: Ajustes | None = None) -> Analisis | None:
     eq = {
         r["fifa_code"]: r
         for r in conn.execute(
-            "SELECT fifa_code, nombre, elo, api_football_id, corners_favor, tarjetas_partido FROM equipos"
+            "SELECT fifa_code, nombre, confederacion, elo, api_football_id, valor_plantilla, "
+            "xg_fs, xga_fs, corners_favor, tarjetas_partido FROM equipos"
         )
     }
     if local not in eq or visita not in eq:
@@ -97,6 +100,7 @@ def analizar_1x2(conn: sqlite3.Connection, data_dir: Path, local: str, visita: s
     return Analisis(
         local, visita, eq[local]["nombre"], eq[visita]["nombre"], metodo, lh, la,
         prob, modelo, novig, trabajo, cuotas, fiable, divergencia, matriz, corners_esp, tarjetas_esp,
+        dict(eq[local]), dict(eq[visita]),
     )
 
 
@@ -125,6 +129,77 @@ def nivel_confianza(a: Analisis) -> str:
     if a.metodo == "elo":
         return "medio (fallback Elo, sin fuerzas estimadas)"
     return "alto" if a.divergencia <= 0.08 else "medio"
+
+
+def _val(v, fmt: str = "{:.0f}", suf: str = "") -> str:
+    return (fmt.format(v) + suf) if v is not None else "—"
+
+
+def _xg(p: dict) -> str:
+    if p.get("xg_fs") is not None and p.get("xga_fs") is not None:
+        return f"{p['xg_fs']:.2f}/{p['xga_fs']:.2f}"
+    return "—"
+
+
+def formato_consola(a: Analisis, ctx: dict | None, confianza: str) -> str:
+    anc = 62
+    nl, nv = a.nombre_local, a.nombre_visita
+    cl, cv = nl[:13], nv[:13]
+    pl, pv = a.perfil_local, a.perfil_visita
+    out = ["", "=" * anc, f"  {nl.upper()}  vs  {nv.upper()}"]
+    if ctx:
+        fecha = ctx["fecha"][:16].replace("T", " ") if ctx["fecha"] else "?"
+        estado = {"TIMED": "por jugarse", "SCHEDULED": "por jugarse", "FINISHED": "finalizado", "IN_PLAY": "en juego"}.get(ctx["estado"], ctx["estado"])
+        out.append(f"  Grupo {ctx['grupo']} · {fecha} · {estado}")
+    out.append("=" * anc)
+
+    out.append("")
+    out.append(f"  PERFIL                {cl:>13} {cv:>13}")
+    out.append(f"  Confederación         {str(pl.get('confederacion') or '—'):>13} {str(pv.get('confederacion') or '—'):>13}")
+    out.append(f"  Elo                   {_val(pl.get('elo')):>13} {_val(pv.get('elo')):>13}")
+    out.append(f"  Valor plantilla       {_val(pl.get('valor_plantilla'), '{:.0f}', ' M€'):>13} {_val(pv.get('valor_plantilla'), '{:.0f}', ' M€'):>13}")
+    out.append(f"  xG / xGA (reciente)   {_xg(pl):>13} {_xg(pv):>13}")
+    out.append(f"  Córners (prom.)       {_val(pl.get('corners_favor'), '{:.1f}'):>13} {_val(pv.get('corners_favor'), '{:.1f}'):>13}")
+    out.append(f"  Tarjetas (prom.)      {_val(pl.get('tarjetas_partido'), '{:.2f}'):>13} {_val(pv.get('tarjetas_partido'), '{:.2f}'):>13}")
+
+    if ctx and ctx.get("standings"):
+        out.append("")
+        out.append(f"  TABLA GRUPO {ctx['grupo']}        PJ  Pts   GF:GC")
+        for s in ctx["standings"]:
+            marca = "->" if s["fifa_code"] in (a.local, a.visita) else "  "
+            out.append(f"  {marca} {s['nombre'][:18]:18}  {s['jugados']}   {s['puntos']:>3}   {s['goles_favor']}:{s['goles_contra']}")
+
+    out.append("")
+    out.append("  PRONÓSTICO              modelo  mercado  apostar   cuota      EV")
+    clave = {"1": a.local, "X": "X", "2": a.visita}
+    for sel, etq in (("1", f"Gana {cl}"), ("X", "Empate"), ("2", f"Gana {cv}")):
+        pin = f"{a.novig[sel] * 100:.1f}%" if sel in a.novig else "—"
+        cu = a.cuotas.get(clave[sel])
+        evtxt = (f"{ev(a.trabajo[sel], cu):+.2f}" if a.fiable else "n/f") if cu else "—"
+        out.append(f"  {etq:18}    {a.modelo[sel] * 100:5.1f}%  {pin:>7}   {a.trabajo[sel] * 100:5.1f}%  {(f'{cu:.2f}' if cu else '—'):>6}  {evtxt:>6}")
+
+    out.append("")
+    out.append("  GOLES")
+    out.append(f"    Esperados: {a.lh + a.la:.1f}   ({cl} {a.lh:.1f} - {a.la:.1f} {cv})")
+    out.append(f"    Over 2.5: {a.prob['over25'] * 100:.0f}%    Under 2.5: {a.prob['under25'] * 100:.0f}%")
+    out.append(f"    Ambos anotan:  Sí {a.prob['btts_si'] * 100:.0f}%    No {a.prob['btts_no'] * 100:.0f}%")
+
+    if a.corners_esp or a.tarjetas_esp:
+        out.append("")
+        out.append("  CÓRNERS Y TARJETAS")
+        if a.corners_esp:
+            o = over_under(a.corners_esp, [8.5, 9.5, 10.5])
+            out.append(f"    Córners esperados: {a.corners_esp:.1f}   (" + "  ".join(f"O{l}: {p * 100:.0f}%" for l, p in o.items()) + ")")
+        if a.tarjetas_esp:
+            o = over_under(a.tarjetas_esp, [2.5, 3.5, 4.5])
+            out.append(f"    Tarjetas esperadas: {a.tarjetas_esp:.1f}   (" + "  ".join(f"O{l}: {p * 100:.0f}%" for l, p in o.items()) + ")")
+
+    out.append("")
+    out.append(f"  CONFIANZA: {confianza}")
+    if a.novig and not a.fiable:
+        out.append(f"  [!] El modelo difiere {a.divergencia * 100:.0f}pp del mercado: NO fiable, no apostar por esta diferencia.")
+    out.append("=" * anc)
+    return "\n".join(out)
 
 
 def generar_markdown(a: Analisis, ctx: dict | None, confianza: str) -> str:

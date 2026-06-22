@@ -5,7 +5,7 @@ import sys
 
 from src.config import load_config
 from src.db.database import connect
-from src.reporte import analizar_1x2, contexto_partido, generar_markdown, nivel_confianza
+from src.reporte import analizar_1x2, contexto_partido, formato_consola, generar_markdown, nivel_confianza
 
 
 def main(local: str, visita: str) -> int:
@@ -44,8 +44,8 @@ def main(local: str, visita: str) -> int:
     }
     base.with_suffix(".json").write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print(md)
-    print(f"\n[guardado] {base.with_suffix('.md')}")
+    print(formato_consola(a, ctx, confianza))
+    print(f"\n(reporte detallado guardado en {base.with_suffix('.md')})")
     return 0
 
 
