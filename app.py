@@ -137,6 +137,57 @@ def _parley_sugerido(a, umbral=0.68):
     return seleccion
 
 
+FAMILIAS_BB = dict(FAMILIAS_PARLEY)
+FAMILIAS_BB["Goles local"] = ["Local marca +0.5", "Local marca +1.5"]
+FAMILIAS_BB["Goles visita"] = ["Visita marca +0.5", "Visita marca +1.5"]
+
+
+def _armar_bb_partido(a, cuota_min, total_min, n_min):
+    cand = []
+    for claves in FAMILIAS_BB.values():
+        ops = [(c, _prob_individual(a, MERCADOS_COMBI[c])) for c in claves if c in MERCADOS_COMBI]
+        ops = [(c, p) for c, p in ops if p > 0 and 1 / p > cuota_min]
+        if ops:
+            cand.append(max(ops, key=lambda x: x[1]))
+    cand.sort(key=lambda x: -x[1])
+    sel, prob, cuota = [], 0.0, 0.0
+    for nombre, _p in cand:
+        sel.append(nombre)
+        prob, _ = _prob_partido_combi(a, [MERCADOS_COMBI[x] for x in sel])
+        cuota = 1 / prob if prob > 0 else 0
+        if len(sel) >= n_min and cuota > total_min:
+            break
+    filas = [{"Mercado": m, "Probabilidad": _pct(_prob_individual(a, MERCADOS_COMBI[m])),
+              "Cuota justa": f"{1 / _prob_individual(a, MERCADOS_COMBI[m]):.2f}"} for m in sel]
+    return filas, prob, cuota, len(sel), a.fiable
+
+
+def _armar_bb_varios(prox, cuota_min, total_min, n_min):
+    conn = connect(CFG.db_path)
+    cand = []
+    for p in prox:
+        a = analizar_1x2(conn, CFG.data_dir, p["lf"], p["vf"])
+        if a is None:
+            continue
+        ops = [(nombre, _prob_individual(a, spec)) for nombre, spec in MERCADOS_COMBI.items()]
+        ops = [(nombre, pr) for nombre, pr in ops if 0 < pr < 0.667 and 1 / pr > cuota_min]
+        if ops:
+            best = max(ops, key=lambda x: x[1])
+            cand.append({"Partido": f"{a.nombre_local} vs {a.nombre_visita}", "Mercado": best[0], "p": best[1], "fiable": a.fiable})
+    conn.close()
+    cand.sort(key=lambda x: -x["p"])
+    sel, prob = [], 1.0
+    for c in cand:
+        sel.append(c)
+        prob *= c["p"]
+        if len(sel) >= n_min and 1 / prob > total_min:
+            break
+    cuota = 1 / prob if prob > 0 else 0
+    fiable = all(c["fiable"] for c in sel)
+    filas = [{"Partido": c["Partido"], "Mercado": c["Mercado"], "Probabilidad": _pct(c["p"]), "Cuota justa": f"{1 / c['p']:.2f}"} for c in sel]
+    return filas, prob, cuota, len(sel), fiable
+
+
 def _pct(x) -> str:
     return f"{x * 100:.1f}%" if x is not None else "—"
 
@@ -495,7 +546,7 @@ def proximos_partidos():
 
 st.sidebar.title("⚽ Botano")
 st.sidebar.caption("Mundial 2026")
-pagina = st.sidebar.radio("Menú", ["Analizar partido", "Analizar apuesta", "Glosario"])
+pagina = st.sidebar.radio("Menú", ["Analizar partido", "Analizar apuesta", "Armar Bet Builder", "Glosario"])
 st.sidebar.caption("Herramienta de análisis, no garantía de ganancia.")
 
 
@@ -734,6 +785,65 @@ elif pagina == "Analizar apuesta":
                 if cuota_m and cuota_m > 1:
                     m2.metric("Valor (EV)", f"{ev(p_corr, cuota_m):+.3f}" if fiable else "n/f")
                     st.caption(f"Cuota justa según el modelo: **{1 / p_corr:.2f}**. " + ("Tiene valor solo si tu cuota la supera." if fiable else "Algún partido es poco fiable vs el mercado (EV no válido)."))
+
+elif pagina == "Armar Bet Builder":
+    st.title("Armar Bet Builder (Boost)")
+    st.caption("Arma una combinada que cumpla el BB Boost de Betano: ≥3 mercados, cada cuota > 1.50, total > 5.00 (+25% de ganancias). "
+               "Criterio: la combinación más probable que cumpla. Solo con partidos de hoy y mañana.")
+    st.info("Las cuotas son la **cuota justa del modelo** (1÷probabilidad), no las exactas de Betano. **Verifica en Betano** que cada mercado supere 1.50 y el total 5.00 antes de apostar. No incluye mercados de goleador (el modelo no los calcula).")
+    modo = st.radio("Combinar", ["Varios partidos (diversificado)", "Un solo partido (boost mismo evento)"], horizontal=True)
+    cc1, cc2, cc3 = st.columns(3)
+    cuota_min = cc1.number_input("Cuota mín. por mercado", 1.1, 5.0, 1.50, step=0.05)
+    total_min = cc2.number_input("Cuota total mín.", 2.0, 50.0, 5.0, step=0.5)
+    n_min = int(cc3.number_input("Mín. de mercados", 2, 13, 3))
+
+    prox = proximos_partidos()
+    idx_partido = None
+    if prox and modo.startswith("Un solo"):
+        opc = [f"{('Hoy' if p['dia'] == 0 else 'Mañana')} {p['hora']} · {p['ln']} vs {p['vn']}" for p in prox]
+        idx_partido = st.selectbox("Partido", range(len(opc)), format_func=lambda i: opc[i])
+
+    if not prox:
+        st.warning("No hay partidos de hoy/mañana en la base. Corre `python -m scripts.actualizar` y reinicia.")
+    elif st.button("Armar Bet Builder", type="primary"):
+        with st.spinner("Analizando partidos..."):
+            if modo.startswith("Un solo"):
+                p = prox[idx_partido]
+                conn = connect(CFG.db_path)
+                a = analizar_1x2(conn, CFG.data_dir, p["lf"], p["vf"])
+                conn.close()
+                if a is None:
+                    st.session_state.bb_result = None
+                    st.error("Sin datos para ese partido.")
+                else:
+                    filas, prob, cuota, n, fiable = _armar_bb_partido(a, cuota_min, total_min, n_min)
+                    st.session_state.bb_result = {"filas": filas, "prob": prob, "cuota": cuota, "n": n, "fiable": fiable,
+                                                  "cumple": n >= n_min and cuota > total_min, "varios": False}
+            else:
+                filas, prob, cuota, n, fiable = _armar_bb_varios(prox, cuota_min, total_min, n_min)
+                st.session_state.bb_result = {"filas": filas, "prob": prob, "cuota": cuota, "n": n, "fiable": fiable,
+                                              "cumple": n >= n_min and cuota > total_min, "varios": True}
+
+    r = st.session_state.get("bb_result")
+    if r:
+        if not r["filas"]:
+            st.warning("No encontré mercados que cumplan (cuota > 1.50). Prueba bajar la cuota mínima.")
+        else:
+            if not r["cumple"]:
+                st.warning(f"No llegué al mínimo (≥{n_min} mercados y total > {total_min}). Esto es lo más cercano; baja el total mínimo o usa 'varios partidos'.")
+            st.table(pd.DataFrame(r["filas"]))
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Mercados", r["n"])
+            m2.metric("Cuota total (justa)", f"{r['cuota']:.2f}")
+            m3.metric("Prob. de acertar", _pct(r["prob"]))
+            stake = st.number_input("Stake para ver la ganancia (COP)", 0.0, 1e8, 10000.0, step=1000.0, key="bb_stake")
+            if stake > 0 and r["cuota"] > 1:
+                gan = stake * (r["cuota"] - 1)
+                st.metric("Ganancia con BB Boost +25%", f"${gan * 1.25:,.0f}", f"sin boost: ${gan:,.0f}")
+            if not r["fiable"]:
+                st.caption("⚠ Algún partido diverge mucho del mercado (modelo poco fiable ahí); tómalo con cautela.")
+            if r["varios"]:
+                st.caption("Combina varios partidos: el boost del 25% de Betano normalmente aplica solo a Bet Builders de un **mismo evento**. Esta combinada quizá no califique para el boost (sí es una combinada válida). Para el boost, usa 'Un solo partido'.")
 
 elif pagina == "Glosario":
     st.title("Qué significa cada término")
