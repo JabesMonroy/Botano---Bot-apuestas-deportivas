@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib
+import subprocess
+import sys
 
 PASOS = [
     ("Creando base de datos", "scripts.init_db"),
@@ -17,8 +19,20 @@ PASOS = [
 ]
 
 
+def _asegurar_dependencias() -> None:
+    try:
+        import dotenv  # noqa: F401
+        import httpx  # noqa: F401
+        import scipy  # noqa: F401
+    except ImportError:
+        print("Instalando dependencias (primera vez, puede tardar un poco)...\n")
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-r", "requirements.txt"], check=False)
+        print()
+
+
 def main() -> int:
     print("Instalación inicial de Botano. Esto descarga y prepara todos los datos.\n")
+    _asegurar_dependencias()
     for i, (desc, modulo) in enumerate(PASOS, 1):
         print(f"[{i}/{len(PASOS)}] {desc}...")
         try:

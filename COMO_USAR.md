@@ -22,6 +22,13 @@ pip install -r requirements.txt
 copy .env.example .env
 ```
 
+> **Si usas PowerShell** y `.venv\Scripts\activate` da un error de permisos, ejecuta primero esto (una vez) y vuelve a activar:
+> ```
+> Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+> .venv\Scripts\Activate.ps1
+> ```
+> Sabrás que está activado porque la línea empieza con `(.venv)`. **Todos los comandos siguientes deben ejecutarse con `(.venv)` visible.**
+
 Luego abre el archivo `.env` con el Bloc de notas y pega tus claves (gratuitas) entre los `=` y el final de cada línea:
 
 ```
