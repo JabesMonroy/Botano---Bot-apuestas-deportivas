@@ -85,6 +85,87 @@ def ver_equipos(cfg) -> None:
     print("\n")
 
 
+MERCADOS = {
+    "1": "1", "x": "X", "2": "2",
+    "o2.5": "over2.5", "u2.5": "under2.5", "o1.5": "over1.5", "u1.5": "under1.5",
+    "btts": "btts", "nobtts": "nobtts",
+}
+
+
+def _analizar(cfg, local: str, visita: str, ajustes=None):
+    from src.reporte import analizar_1x2, contexto_partido, formato_consola, nivel_confianza
+    conn = connect(cfg.db_path)
+    a = analizar_1x2(conn, cfg.data_dir, local, visita, ajustes)
+    ctx = contexto_partido(conn, local, visita)
+    conn.close()
+    if a is None:
+        print("No encuentro ese partido o esos códigos. Usa la opción 9 para ver los códigos.")
+        return
+    print(formato_consola(a, ctx, nivel_confianza(a)))
+
+
+def _opcion_bajas(cfg) -> None:
+    from src.modelo.dixon_coles import Ajustes
+    from src.plantillas import detectar_ausencias, multiplicadores
+
+    l, v = _pedir("Local (código): ").upper(), _pedir("Visitante (código): ").upper()
+    conn = connect(cfg.db_path)
+    info = {
+        r["fifa_code"]: dict(r)
+        for r in conn.execute(
+            "SELECT fifa_code, nombre, transfermarkt_id, football_data_id, valor_plantilla "
+            "FROM equipos WHERE fifa_code IN (?, ?)",
+            (l, v),
+        )
+    }
+    conn.close()
+    if l not in info or v not in info:
+        print("Código no encontrado (opción 9 para verlos).")
+        return
+
+    print("\nBuscando ausencias en internet (plantilla habitual vs convocatoria oficial)...")
+    aus = {}
+    for code in (l, v):
+        aus[code] = detectar_ausencias(cfg, info[code]["transfermarkt_id"], info[code]["football_data_id"])
+        if aus[code]:
+            print(f"  {info[code]['nombre']}: " + ", ".join(f"{n} (€{val:.0f}m)" for n, val in aus[code][:5]))
+        else:
+            print(f"  {info[code]['nombre']}: sin ausencias detectadas")
+
+    print("\nSi sabes de alguna lesión de última hora no detectada, añádela (si no, pulsa Enter):")
+    fuera_l = [n for n, _ in aus[l]] + [x.strip() for x in _pedir(f"  Bajas extra de {l}: ").split(",") if x.strip()]
+    fuera_v = [n for n, _ in aus[v]] + [x.strip() for x in _pedir(f"  Bajas extra de {v}: ").split(",") if x.strip()]
+
+    ml = multiplicadores(cfg, info[l]["transfermarkt_id"], info[l]["valor_plantilla"], fuera_l)
+    mv = multiplicadores(cfg, info[v]["transfermarkt_id"], info[v]["valor_plantilla"], fuera_v)
+    print(f"\nBajas aplicadas — {l}: {', '.join(fuera_l) or 'ninguna'} | {v}: {', '.join(fuera_v) or 'ninguna'}")
+    _analizar(cfg, l, v, Ajustes(ataque_local=ml[0], defensa_local=ml[1], ataque_visita=mv[0], defensa_visita=mv[1]))
+
+
+def _opcion_combinada(cfg) -> None:
+    print("\nArmamos tu combinada paso a paso. Deja el equipo vacío y pulsa Enter para terminar.\n")
+    selecciones = []
+    while True:
+        l = _pedir(f"Selección {len(selecciones) + 1} — Local (código, Enter para terminar): ").upper()
+        if not l:
+            break
+        v = _pedir("            Visitante (código): ").upper()
+        print("   Mercado:  1=gana local   X=empate   2=gana visita")
+        print("             o2.5=más de 2.5 goles   u2.5=menos de 2.5   btts=ambos anotan   nobtts=no")
+        m = _pedir("   Elige el mercado: ").lower().strip()
+        if m not in MERCADOS:
+            print("   Mercado no válido, repite esta selección.\n")
+            continue
+        selecciones.append(f"{l}-{v}:{MERCADOS[m]}")
+        print(f"   [ok] {l} vs {v} -> {m}\n")
+    if not selecciones:
+        print("No añadiste selecciones.")
+        return
+    cuota = _pedir("Cuota combinada que te da Betano (Enter si no la tienes): ").strip()
+    from scripts.bet_builder import main as m
+    m(selecciones + ([f"@{cuota}"] if cuota else []))
+
+
 def _accion(opcion: str, cfg) -> None:
     if opcion == "1":
         from scripts.actualizar import main as m
@@ -94,17 +175,9 @@ def _accion(opcion: str, cfg) -> None:
         from scripts.generar_reporte import main as m
         m(l, v)
     elif opcion == "3":
-        l, v = _pedir("Local (código): ").upper(), _pedir("Visitante (código): ").upper()
-        fl = _pedir(f"Bajas de {l} (nombres separados por coma, enter si ninguna): ")
-        fv = _pedir(f"Bajas de {v} (nombres separados por coma, enter si ninguna): ")
-        from scripts.impacto_bajas import main as m
-        m(l, v, [x for x in fl.split(",") if x.strip()], [x for x in fv.split(",") if x.strip()])
+        _opcion_bajas(cfg)
     elif opcion == "4":
-        print("Formato: EQUIPO-EQUIPO:mercado  (ej. ARG-AUT:1 ARG-AUT:under2.5)")
-        print("Mercados: 1 X 2 1X 12 X2 over2.5 under2.5 btts nobtts ...")
-        toks = _pedir("Selecciones (y opcional @cuota): ").split()
-        from scripts.bet_builder import main as m
-        m(toks)
+        _opcion_combinada(cfg)
     elif opcion == "5":
         from scripts.bajas import main as m
         m(_pedir("Equipo (código): ").upper())
