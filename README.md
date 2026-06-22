@@ -69,6 +69,7 @@ python -m scripts.estimar_fuerzas     # fuerzas Dixon-Coles ancladas al Elo
 python -m scripts.calibrar_sesgo      # corrección de empate + shrinkage
 python -m scripts.calibrar_valor      # peso del valor de plantilla (calibrado al mercado)
 python -m scripts.calibrar_xg         # peso del xG de selección (calibrado al mercado)
+python -m scripts.calibrar_tiros      # calibra tiros/xG con el Mundial 2022 (StatsBomb)
 ```
 
 ## Uso diario

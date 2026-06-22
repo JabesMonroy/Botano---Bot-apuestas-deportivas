@@ -143,6 +143,16 @@ def _ajustes_por_bajas(local: str, visita: str):
     return aj, ("  ·  ".join(detalle) if detalle else "No se detectaron ausencias en la convocatoria.")
 
 
+@st.cache_data(show_spinner=False)
+def params_tiros():
+    import json
+    ruta = CFG.data_dir / "modelos" / "tiros.json"
+    if ruta.exists():
+        d = json.loads(ruta.read_text(encoding="utf-8"))
+        return d.get("xg_por_tiro", 0.108), d.get("ratio_al_arco", 0.32)
+    return 0.108, 0.32
+
+
 @st.cache_data(show_spinner="Consultando estadísticas del árbitro...")
 def tasa_arbitro(nombre: str):
     if not nombre:
@@ -268,9 +278,9 @@ def mostrar_analisis(a, ctx) -> None:
         st.caption(f"Córners y tarjetas: modelo **Poisson** sobre los promedios de cada selección (Footystats){nota_arb}. '+9.5' = 10 o más.")
 
     st.markdown("####  Tiros (estimación a partir del xG)")
-    k = 0.105
+    k, ratio_arco = params_tiros()
     tiros_l, tiros_v = a.lh / k, a.la / k
-    arco_l, arco_v = tiros_l * 0.35, tiros_v * 0.35
+    arco_l, arco_v = tiros_l * ratio_arco, tiros_v * ratio_arco
     z1, z2, z3 = st.columns(3)
     z1.metric(f"Tiros {a.nombre_local}", f"{tiros_l:.0f}", f"al arco ~{arco_l:.0f}")
     z2.metric(f"Tiros {a.nombre_visita}", f"{tiros_v:.0f}", f"al arco ~{arco_v:.0f}")
@@ -282,7 +292,7 @@ def mostrar_analisis(a, ctx) -> None:
     oa = over_under(arco_l + arco_v, _lineas(arco_l + arco_v, (-3.5, -1.5, 0.5, 2.5)))
     za.markdown("**Tiros al arco totales (líneas)**")
     za.table(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in oa.items()]))
-    st.warning("**ESTIMACIÓN, no es un dato medido.** Se deriva del xG del modelo (tiros ≈ goles esperados ÷ 0.105; al arco ≈ 35% de los tiros). Ninguna fuente gratuita publica los tiros por selección, así que úsalo solo como orientación.")
+    st.info(f"**Estimación** (no es un dato medido): tiros ≈ goles esperados ÷ {k:.3f} y al arco ≈ {ratio_arco * 100:.0f}% — **parámetros calibrados con los tiros reales del Mundial 2022 (StatsBomb)**, no inventados. Orientativo.")
 
     st.markdown("####  Probabilidades por línea (más de / menos de)")
     col_g, col_c, col_t = st.columns(3)

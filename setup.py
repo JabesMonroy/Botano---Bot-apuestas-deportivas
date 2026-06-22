@@ -16,6 +16,7 @@ PASOS = [
     ("Calibrando corrección de empate y shrinkage", "scripts.calibrar_sesgo"),
     ("Calibrando peso del valor de plantilla", "scripts.calibrar_valor"),
     ("Calibrando peso del xG", "scripts.calibrar_xg"),
+    ("Calibrando tiros con el Mundial 2022 (StatsBomb)", "scripts.calibrar_tiros"),
 ]
 
 
