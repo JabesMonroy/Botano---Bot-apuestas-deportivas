@@ -401,9 +401,23 @@ def simular_cached(n: int):
     return pd.DataFrame(filas)
 
 
+@st.cache_data(show_spinner=False)
+def equipos_busqueda():
+    from src.lector import _norm
+    conn = connect(CFG.db_path)
+    filas = conn.execute("SELECT fifa_code, nombre, odds_api_name, eloratings_name FROM equipos").fetchall()
+    conn.close()
+    out = []
+    for r in filas:
+        for nm in (r["nombre"], r["odds_api_name"], r["eloratings_name"]):
+            if nm and len(nm) >= 4:
+                out.append((_norm(nm), r["fifa_code"], r["nombre"]))
+    return out
+
+
 st.sidebar.title("⚽ Botano")
 st.sidebar.caption("Mundial 2026")
-pagina = st.sidebar.radio("Menú", ["Analizar partido", "Combinada", "Simular torneo", "Mis apuestas / CLV", "Glosario"])
+pagina = st.sidebar.radio("Menú", ["Analizar partido", "Combinada", "Leer captura", "Simular torneo", "Mis apuestas / CLV", "Glosario"])
 st.sidebar.caption("Herramienta de análisis, no garantía de ganancia.")
 
 
@@ -472,6 +486,47 @@ elif pagina == "Combinada":
             if cuota and cuota > 1:
                 m2.metric("Valor (EV)", f"{ev(p_corr, cuota):+.3f}" if fiable else "n/f")
                 st.caption(f"Cuota justa según el modelo: **{1 / p_corr:.2f}**. " + ("Tiene valor si tu cuota la supera." if fiable else "Algún partido es poco fiable vs el mercado (EV no válido)."))
+
+elif pagina == "Leer captura":
+    st.title("Leer combinada desde una captura")
+    st.caption("Sube una captura de tu combinada de Betano (de un solo partido). El bot detecta equipos y mercados con OCR; revisa y ajusta lo detectado antes de calcular.")
+    archivo = st.file_uploader("Captura de la combinada (PNG/JPG)", type=["png", "jpg", "jpeg"])
+    if archivo:
+        from src.lector import analizar, ocr
+        try:
+            with st.spinner("Leyendo la imagen con OCR de Windows..."):
+                texto = ocr(archivo.getvalue())
+        except Exception as exc:
+            st.error(f"No se pudo leer la imagen: {exc}")
+            texto = ""
+        if texto:
+            local, visita, detectados = analizar(texto, equipos_busqueda())
+            with st.expander("Texto leído por el OCR (revisa si algo se detectó mal)"):
+                st.text(texto)
+            if not local or not visita:
+                st.warning("No detecté dos equipos con claridad. Prueba con una captura más nítida o usa la pestaña **Combinada**.")
+            else:
+                st.success(f"Detectado: **{local[1]} vs {visita[1]}** · {len(detectados)} mercado(s)")
+                cl = next((n for n in NOMBRES if EQUIPOS[n] == local[0]), NOMBRES[0])
+                cv = next((n for n in NOMBRES if EQUIPOS[n] == visita[0]), NOMBRES[1])
+                c1, c2 = st.columns(2)
+                loc = c1.selectbox("Local", NOMBRES, index=NOMBRES.index(cl))
+                vis = c2.selectbox("Visitante", NOMBRES, index=NOMBRES.index(cv))
+                mer_sel = st.multiselect("Mercados (ajusta si el OCR falló)", list(MERCADOS_COMBI), default=[m for m in detectados if m in MERCADOS_COMBI])
+                cuota = st.number_input("Cuota combinada de Betano (0 = no la tengo)", 0.0, 10000.0, 0.0, step=0.05)
+                if st.button("Calcular", type="primary") and mer_sel:
+                    conn = connect(CFG.db_path)
+                    a = analizar_1x2(conn, CFG.data_dir, EQUIPOS[loc], EQUIPOS[vis])
+                    conn.close()
+                    if a is None:
+                        st.error("Sin datos para ese partido.")
+                    else:
+                        corr, naive = _prob_partido_combi(a, [MERCADOS_COMBI[m] for m in mer_sel])
+                        m1, m2 = st.columns(2)
+                        m1.metric("Probabilidad de la combinada", _pct(corr), f"naive: {_pct(naive)}")
+                        m2.metric("Cuota justa del modelo", f"{1 / corr:.2f}" if corr > 0 else "—")
+                        if cuota and cuota > 1:
+                            st.metric("Valor (EV)", f"{ev(corr, cuota):+.3f}" if a.fiable else "n/f")
 
 elif pagina == "Simular torneo":
     st.title("Simulación del torneo")

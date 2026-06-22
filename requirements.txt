@@ -7,3 +7,5 @@ beautifulsoup4>=4.12
 lxml>=5.2
 streamlit>=1.36
 pandas>=2.2
+pillow>=10.0
+winocr>=0.0.14
