@@ -35,22 +35,42 @@ MERCADOS_COMBI = {
     "Local o empate (1X)": ("g", "1X"),
     "Empate o visita (X2)": ("g", "X2"),
     "Local o visita, no empate (12)": ("g", "12"),
+    "Ambos anotan": ("g", "btts"),
+    "No ambos anotan": ("g", "nobtts"),
+    "Más de 0.5 goles": ("g", "over0.5"),
     "Más de 1.5 goles": ("g", "over1.5"),
     "Menos de 1.5 goles": ("g", "under1.5"),
     "Más de 2.5 goles": ("g", "over2.5"),
     "Menos de 2.5 goles": ("g", "under2.5"),
     "Más de 3.5 goles": ("g", "over3.5"),
-    "Ambos anotan": ("g", "btts"),
-    "No ambos anotan": ("g", "nobtts"),
+    "Menos de 3.5 goles": ("g", "under3.5"),
+    "Más de 4.5 goles": ("g", "over4.5"),
+    "Menos de 4.5 goles": ("g", "under4.5"),
+    "Local marca +0.5": ("g", "loc0.5"),
+    "Local marca +1.5": ("g", "loc1.5"),
+    "Visita marca +0.5": ("g", "vis0.5"),
+    "Visita marca +1.5": ("g", "vis1.5"),
+    "Primer gol: local": ("pg", "l"),
+    "Primer gol: visita": ("pg", "v"),
+    "Primer gol: ninguno (0-0)": ("pg", "n"),
+    "Más de 6.5 córners": ("c", 6.5, "o"),
+    "Más de 7.5 córners": ("c", 7.5, "o"),
+    "Menos de 7.5 córners": ("c", 7.5, "u"),
     "Más de 8.5 córners": ("c", 8.5, "o"),
     "Menos de 8.5 córners": ("c", 8.5, "u"),
     "Más de 9.5 córners": ("c", 9.5, "o"),
     "Menos de 9.5 córners": ("c", 9.5, "u"),
     "Más de 10.5 córners": ("c", 10.5, "o"),
+    "Menos de 10.5 córners": ("c", 10.5, "u"),
+    "Más de 11.5 córners": ("c", 11.5, "o"),
+    "Más de 1.5 tarjetas": ("t", 1.5, "o"),
+    "Más de 2.5 tarjetas": ("t", 2.5, "o"),
+    "Menos de 2.5 tarjetas": ("t", 2.5, "u"),
     "Más de 3.5 tarjetas": ("t", 3.5, "o"),
     "Menos de 3.5 tarjetas": ("t", 3.5, "u"),
     "Más de 4.5 tarjetas": ("t", 4.5, "o"),
     "Menos de 4.5 tarjetas": ("t", 4.5, "u"),
+    "Menos de 5.5 tarjetas": ("t", 5.5, "u"),
 }
 
 
@@ -68,6 +88,9 @@ def _prob_partido_combi(a, mercados):
         elif m[0] == "t" and a.tarjetas_esp:
             ov = over_under(a.tarjetas_esp, [m[1]])[m[1]]
             extra *= ov if m[2] == "o" else (1 - ov)
+        elif m[0] == "pg":
+            pl, pv, sin = _primer_gol(a.lh, a.la, float(a.matriz[0, 0]))
+            extra *= {"l": pl, "v": pv, "n": sin}[m[1]]
     return p_corr * extra, p_naive * extra
 
 
