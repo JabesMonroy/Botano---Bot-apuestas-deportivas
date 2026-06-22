@@ -79,6 +79,11 @@ def _primer_gol(lh: float, la: float, p00: float):
     return (lh / tot) * (1 - p00), (la / tot) * (1 - p00), p00
 
 
+def _lineas(centro: float, deltas=(-5.5, -2.5, 0.5, 3.5)) -> list[float]:
+    c = round(centro)
+    return [c + d for d in deltas if c + d > 0]
+
+
 def _ajustes_por_bajas(local: str, visita: str):
     conn = connect(CFG.db_path)
     info = {
@@ -225,6 +230,23 @@ def mostrar_analisis(a, ctx) -> None:
             s2.caption(" · ".join(f"+{l}: {_pct(p)}" for l, p in o.items()))
         nota_arb = ", combinados con la **severidad del árbitro** (Transfermarkt)" if arb_stats else ""
         st.caption(f"Córners y tarjetas: modelo **Poisson** sobre los promedios de cada selección (Footystats){nota_arb}. '+9.5' = 10 o más.")
+
+    st.markdown("####  Tiros (estimación a partir del xG)")
+    k = 0.105
+    tiros_l, tiros_v = a.lh / k, a.la / k
+    arco_l, arco_v = tiros_l * 0.35, tiros_v * 0.35
+    z1, z2, z3 = st.columns(3)
+    z1.metric(f"Tiros {a.nombre_local}", f"{tiros_l:.0f}", f"al arco ~{arco_l:.0f}")
+    z2.metric(f"Tiros {a.nombre_visita}", f"{tiros_v:.0f}", f"al arco ~{arco_v:.0f}")
+    z3.metric("Tiros totales", f"{tiros_l + tiros_v:.0f}", f"al arco ~{arco_l + arco_v:.0f}")
+    zt, za = st.columns(2)
+    ot = over_under(tiros_l + tiros_v, _lineas(tiros_l + tiros_v))
+    zt.markdown("**Tiros totales (líneas)**")
+    zt.table(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in ot.items()]))
+    oa = over_under(arco_l + arco_v, _lineas(arco_l + arco_v, (-3.5, -1.5, 0.5, 2.5)))
+    za.markdown("**Tiros al arco totales (líneas)**")
+    za.table(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in oa.items()]))
+    st.warning("**ESTIMACIÓN, no es un dato medido.** Se deriva del xG del modelo (tiros ≈ goles esperados ÷ 0.105; al arco ≈ 35% de los tiros). Ninguna fuente gratuita publica los tiros por selección, así que úsalo solo como orientación.")
 
     st.markdown("####  Probabilidades por línea (más de / menos de)")
     col_g, col_c, col_t = st.columns(3)
