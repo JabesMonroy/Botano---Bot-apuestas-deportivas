@@ -588,67 +588,88 @@ elif pagina == "Combinada":
 
     st.divider()
     st.subheader("🧩 Combinada de varios partidos")
-    st.caption("Sube una o varias capturas de una combinada con partidos distintos (Betano app/web). El bot detecta cada partido con su mercado y los junta.")
-    multi = st.file_uploader("Capturas (puedes subir varias a la vez)", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key="multi_up")
-    if multi:
+    st.caption("Pega (Ctrl+V) o sube una o varias capturas de una combinada con partidos distintos. El bot detecta cada partido con su mercado; revísalo y corrige en la tabla antes de calcular.")
+    from streamlit_paste_button import paste_image_button
+    pegar_m = paste_image_button("📋 Pegar captura (Ctrl+V)", errors="ignore", key="multi_paste")
+    multi = st.file_uploader("…o sube el/los archivo(s) (PNG/JPG)", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key="multi_up")
+    imagenes = []
+    if pegar_m.image_data is not None:
+        import io as _io2
+        _b = _io2.BytesIO()
+        pegar_m.image_data.save(_b, format="PNG")
+        imagenes.append(("(pegada)", _b.getvalue()))
+    for f in multi or []:
+        imagenes.append((f.name, f.getvalue()))
+    if imagenes:
         import importlib
 
         import src.lector as _lm
         importlib.reload(_lm)
         eqs = equipos_busqueda()
         detectadas, textos = [], []
-        for f in multi:
+        for nombre, datos in imagenes:
             try:
-                with st.spinner(f"Leyendo {f.name}..."):
-                    txt = _lm.ocr(f.getvalue())
+                with st.spinner(f"Leyendo {nombre}..."):
+                    txt = _lm.ocr(datos)
             except Exception as exc:
-                st.error(f"No se pudo leer {f.name}: {exc}")
+                st.error(f"No se pudo leer {nombre}: {exc}")
                 continue
             textos.append(txt)
             detectadas.extend(_lm.analizar_multi(txt, eqs))
         with st.expander("Texto leído por el OCR (revisa si algo se detectó mal)"):
             for txt in textos:
                 st.text(txt)
-        vistas, sel = set(), []
+        vistas, filas_init = set(), []
         for loc, vis, m in detectadas:
             clave = (loc[0], vis[0], m)
             if clave not in vistas:
                 vistas.add(clave)
-                sel.append((loc, vis, m))
-        if not sel:
-            st.warning("No detecté partidos con claridad. Revisa el texto del OCR o usa el modo manual de abajo.")
-        else:
-            st.success(f"{len(sel)} selección(es) detectada(s)")
-            st.table(pd.DataFrame([{"Partido": f"{loc[1]} vs {vis[1]}", "Mercado": m} for loc, vis, m in sel]))
-            cuota_x = st.number_input("Cuota combinada de Betano (0 = no la tengo)", 0.0, 100000.0, 0.0, step=0.05, key="multi_cuota")
-            if st.button("Calcular combinada", type="primary", key="multi_calc"):
-                grupos: dict = {}
-                for loc, vis, m in sel:
-                    grupos.setdefault((loc[0], vis[0]), []).append(m)
-                conn = connect(CFG.db_path)
-                p_corr, fiable, pares, ok = 1.0, True, [], True
-                for (l, v), mers in grupos.items():
-                    a = analizar_1x2(conn, CFG.data_dir, l, v)
-                    if a is None:
-                        st.error(f"Sin datos para {l}-{v}.")
-                        ok = False
-                        break
-                    corr, _ = _prob_partido_combi(a, [MERCADOS_COMBI[m] for m in mers if m in MERCADOS_COMBI])
-                    p_corr *= corr
-                    fiable = fiable and a.fiable
-                    for m in mers:
-                        if m in MERCADOS_COMBI:
-                            pares.append((f"{a.nombre_local}-{a.nombre_visita}: {m}", _prob_individual(a, MERCADOS_COMBI[m])))
-                conn.close()
-                if ok:
-                    st.markdown("**Desglose: cómo baja con cada selección**")
-                    st.table(_desglose(pares))
-                    m1, m2 = st.columns(2)
-                    m1.metric("Probabilidad de la combinada", _pct(p_corr))
-                    m2.metric("Cuota justa del modelo", f"{1 / p_corr:.2f}" if p_corr > 0 else "—")
-                    if cuota_x and cuota_x > 1:
-                        st.metric("Valor (EV)", f"{ev(p_corr, cuota_x):+.3f}" if fiable else "n/f")
-                    st.caption("Tiene valor solo si tu cuota de Betano supera la cuota justa del modelo.")
+                filas_init.append({
+                    "Local": next((n for n in NOMBRES if EQUIPOS[n] == loc[0]), NOMBRES[0]),
+                    "Visitante": next((n for n in NOMBRES if EQUIPOS[n] == vis[0]), NOMBRES[1]),
+                    "Mercado": m,
+                })
+        if not filas_init:
+            st.warning("No detecté partidos con claridad. Añade las filas a mano en la tabla de abajo.")
+            filas_init = [{"Local": NOMBRES[0], "Visitante": NOMBRES[1], "Mercado": list(MERCADOS_COMBI)[0]}]
+        st.markdown("**Selecciones detectadas** — corrige equipos/mercados o añade filas (botón +):")
+        editor = st.data_editor(
+            pd.DataFrame(filas_init), num_rows="dynamic", hide_index=True, use_container_width=True, key="multi_editor",
+            column_config={
+                "Local": st.column_config.SelectboxColumn(options=NOMBRES, required=True),
+                "Visitante": st.column_config.SelectboxColumn(options=NOMBRES, required=True),
+                "Mercado": st.column_config.SelectboxColumn(options=list(MERCADOS_COMBI), required=True),
+            },
+        )
+        cuota_x = st.number_input("Cuota combinada de Betano (0 = no la tengo)", 0.0, 100000.0, 0.0, step=0.05, key="multi_cuota")
+        if st.button("Calcular combinada", type="primary", key="multi_calc"):
+            grupos: dict = {}
+            for _, fila in editor.iterrows():
+                if fila["Local"] in EQUIPOS and fila["Visitante"] in EQUIPOS and fila["Mercado"] in MERCADOS_COMBI:
+                    grupos.setdefault((EQUIPOS[fila["Local"]], EQUIPOS[fila["Visitante"]]), []).append(fila["Mercado"])
+            conn = connect(CFG.db_path)
+            p_corr, fiable, pares, ok = 1.0, True, [], True
+            for (l, v), mers in grupos.items():
+                a = analizar_1x2(conn, CFG.data_dir, l, v)
+                if a is None:
+                    st.error(f"Sin datos para {l}-{v}.")
+                    ok = False
+                    break
+                corr, _ = _prob_partido_combi(a, [MERCADOS_COMBI[m] for m in mers])
+                p_corr *= corr
+                fiable = fiable and a.fiable
+                for m in mers:
+                    pares.append((f"{a.nombre_local}-{a.nombre_visita}: {m}", _prob_individual(a, MERCADOS_COMBI[m])))
+            conn.close()
+            if ok and pares:
+                st.markdown("**Desglose: cómo baja con cada selección**")
+                st.table(_desglose(pares))
+                m1, m2 = st.columns(2)
+                m1.metric("Probabilidad de la combinada", _pct(p_corr))
+                m2.metric("Cuota justa del modelo", f"{1 / p_corr:.2f}" if p_corr > 0 else "—")
+                if cuota_x and cuota_x > 1:
+                    st.metric("Valor (EV)", f"{ev(p_corr, cuota_x):+.3f}" if fiable else "n/f")
+                st.caption("Tiene valor solo si tu cuota de Betano supera la cuota justa del modelo.")
 
     st.divider()
     with st.expander("✍️ Armar la combinada manualmente (incluye varios partidos)"):

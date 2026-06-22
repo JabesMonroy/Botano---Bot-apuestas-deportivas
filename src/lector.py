@@ -24,6 +24,7 @@ ALIAS = {
 
 TIPOS_MERCADO = [
     ("resultado del partido", "1x2"),
+    ("doble oportunidad", "doble"),
     ("goles totales", "goles"),
     ("tarjetas totales", "tarj"),
     ("tiros de esquina", "corn"),
@@ -76,6 +77,7 @@ def _equipo_de(sel: str, equipos):
 
 
 def _sel_linea(sel: str, palabra: str, lineas_o: list[float], lineas_u: list[float]) -> str | None:
+    sel = re.sub(r"m[a]s\s*/\s*menos|menos\s*/\s*m[a]s", " ", sel)
     md = re.search(r"\b(mas|menos)\b", sel)
     if not md:
         return None
@@ -132,6 +134,14 @@ def _mercado_seg(seg: str, fam: str, lf: str, vf: str, equipos):
         if "empate" in seg:
             return "Empate"
         return None
+    if fam == "doble":
+        if re.search(r"\b1\s*x\b", seg):
+            return "Local o empate (1X)"
+        if re.search(r"\bx\s*2\b", seg):
+            return "Empate o visita (X2)"
+        if re.search(r"\b12\b", seg):
+            return "Local o visita, no empate (12)"
+        return None
     if fam == "pg":
         if _fifa_en(seg, lf, equipos):
             return "Primer gol: local"
@@ -139,7 +149,7 @@ def _mercado_seg(seg: str, fam: str, lf: str, vf: str, equipos):
             return "Primer gol: visita"
         return None
     if fam == "btts":
-        return "Ambos anotan"
+        return "No ambos anotan" if re.search(r"\bno\b", seg) else "Ambos anotan"
     if fam == "goles":
         return _sel_linea(seg, "goles", GOLES, GOLES)
     if fam == "tarj":
@@ -149,22 +159,44 @@ def _mercado_seg(seg: str, fam: str, lf: str, vf: str, equipos):
     return None
 
 
-def analizar_multi(texto: str, equipos):
-    t = _norm(texto)
-    disp_de = {}
-    for nn, fifa, disp in equipos:
-        disp_de.setdefault(fifa, disp)
-
-    apariciones = []
+def _detectar_partidos(t: str, equipos):
+    apar = []
     for nn, fifa, _d in equipos:
         s = 0
         while True:
             p = t.find(nn, s)
             if p < 0:
                 break
-            apariciones.append((p, fifa))
+            apar.append((p, p + len(nn), fifa))
             s = p + 1
-    apariciones.sort()
+    apar.sort()
+    dedup = []
+    for p0, e0, f0 in apar:
+        if dedup and dedup[-1][2] == f0 and p0 < dedup[-1][1]:
+            if e0 > dedup[-1][1]:
+                dedup[-1] = (dedup[-1][0], e0, f0)
+            continue
+        dedup.append((p0, e0, f0))
+    apar = dedup
+    partidos = []
+    i = 0
+    while i < len(apar) - 1:
+        _p0, e0, f0 = apar[i]
+        p1, e1, f1 = apar[i + 1]
+        if f1 != f0 and (p1 - e0) < 45:
+            partidos.append((apar[i][0], e1, f0, f1))
+            i += 2
+        else:
+            i += 1
+    return partidos
+
+
+def analizar_multi(texto: str, equipos):
+    t = _norm(texto)
+    disp_de = {}
+    for nn, fifa, disp in equipos:
+        disp_de.setdefault(fifa, disp)
+    partidos = _detectar_partidos(t, equipos)
 
     ocur = []
     for kw, fam in TIPOS_MERCADO:
@@ -177,19 +209,20 @@ def analizar_multi(texto: str, equipos):
             s = p + 1
     ocur.sort()
 
-    out = []
-    for idx, (p0, p1, fam) in enumerate(ocur):
-        prev_end = ocur[idx - 1][1] if idx > 0 else 0
-        partido = []
-        for pos, fifa in apariciones:
-            if pos >= p1 and fifa not in partido:
-                partido.append(fifa)
-            if len(partido) >= 2:
-                break
-        if len(partido) < 2:
-            continue
-        lf, vf = partido[0], partido[1]
-        mercado = _mercado_seg(t[prev_end:p0], fam, lf, vf, equipos)
+    out, prev = [], 0
+    for p0, p1, fam in ocur:
+        simple = next((pp for pp in partidos if 0 <= pp[0] - p1 < 30), None)
+        if simple:
+            lf, vf = simple[2], simple[3]
+        else:
+            antes = [pp for pp in partidos if pp[1] <= p0]
+            if not antes:
+                prev = p1
+                continue
+            bb = max(antes, key=lambda pp: pp[1])
+            lf, vf = bb[2], bb[3]
+        mercado = _mercado_seg(t[prev:p0], fam, lf, vf, equipos)
         if mercado:
             out.append(((lf, disp_de.get(lf, lf)), (vf, disp_de.get(vf, vf)), mercado))
+        prev = p1
     return out
