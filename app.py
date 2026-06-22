@@ -234,14 +234,18 @@ def mostrar_analisis(a, ctx) -> None:
         {"Línea": x, "Más de": _pct(float(dist[int(x) + 1:].sum())), "Menos de": _pct(1 - float(dist[int(x) + 1:].sum()))}
         for x in (0.5, 1.5, 2.5, 3.5, 4.5)
     ]))
+    col_g.caption(f"Debido a que se esperan **{a.lh + a.la:.1f} goles** (ataque de {a.nombre_local} vs defensa de {a.nombre_visita} y viceversa): las líneas bajas son casi seguras y las altas caen rápido.")
     if a.corners_esp:
         oc = over_under(a.corners_esp, [6.5, 7.5, 8.5, 9.5, 10.5, 11.5])
         col_c.markdown("**Córners totales**")
         col_c.table(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in oc.items()]))
+        col_c.caption(f"Debido al dominio esperado: {a.nombre_local} es _{_estilo(pl).split(',')[0]}_ y {a.nombre_visita} _{_estilo(pv).split(',')[0]}_; cuanto más ofensivo, más córners genera.")
     if a.tarjetas_esp:
         ot = over_under(tarjetas_final, [0.5, 1.5, 2.5, 3.5, 4.5, 5.5])
         col_t.markdown("**Tarjetas totales**")
         col_t.table(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in ot.items()]))
+        razon = f"árbitro **{ctx['arbitro']}** ({arb_stats['amarillas_pp']:.1f}/partido)" if (arb_stats and ctx) else "la intensidad del partido"
+        col_t.caption(f"Debido a **{tarjetas_final:.1f} tarjetas** esperadas, influidas por {razon}.")
 
     st.markdown("####  Goles por equipo y primer gol")
     eq1, eq2, eq3 = st.columns(3)
