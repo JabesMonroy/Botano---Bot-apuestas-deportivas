@@ -9,6 +9,29 @@ GOLES = [0.5, 1.5, 2.5, 3.5, 4.5]
 TARJETAS_O = [1.5, 2.5, 3.5, 4.5]
 TARJETAS_U = [2.5, 3.5, 4.5, 5.5]
 
+ALIAS = {
+    "COD": ["republica democratica del congo", "rd congo", "dr congo"],
+    "KOR": ["corea del sur", "korea republic", "republica de corea"],
+    "PRK": ["corea del norte"],
+    "USA": ["estados unidos", "united states"],
+    "KSA": ["arabia saudita", "arabia saudi", "saudi arabia"],
+    "RSA": ["sudafrica", "south africa"],
+    "CRC": ["costa rica"],
+    "UAE": ["emiratos arabes unidos"],
+    "CIV": ["costa de marfil", "ivory coast"],
+    "CPV": ["cabo verde", "cape verde"],
+}
+
+TIPOS_MERCADO = [
+    ("resultado del partido", "1x2"),
+    ("goles totales", "goles"),
+    ("tarjetas totales", "tarj"),
+    ("tiros de esquina", "corn"),
+    ("proximo gol", "pg"),
+    ("primer gol", "pg"),
+    ("ambos", "btts"),
+]
+
 
 def _norm(t: str) -> str:
     return unicodedata.normalize("NFKD", t or "").encode("ascii", "ignore").decode().lower()
@@ -94,3 +117,79 @@ def analizar(texto: str, equipos):
     _ou(r"goles?\s+total", "goles", GOLES, GOLES)
     _ou(r"(?:tiros de esquina|corner)", "córners", CORNERS, CORNERS)
     return local, visita, list(dict.fromkeys(mercados))
+
+
+def _fifa_en(seg: str, fifa: str, equipos) -> bool:
+    return any(f == fifa and nn in seg for nn, f, _d in equipos)
+
+
+def _mercado_seg(seg: str, fam: str, lf: str, vf: str, equipos):
+    if fam == "1x2":
+        if _fifa_en(seg, lf, equipos):
+            return "Gana local"
+        if _fifa_en(seg, vf, equipos):
+            return "Gana visita"
+        if "empate" in seg:
+            return "Empate"
+        return None
+    if fam == "pg":
+        if _fifa_en(seg, lf, equipos):
+            return "Primer gol: local"
+        if _fifa_en(seg, vf, equipos):
+            return "Primer gol: visita"
+        return None
+    if fam == "btts":
+        return "Ambos anotan"
+    if fam == "goles":
+        return _sel_linea(seg, "goles", GOLES, GOLES)
+    if fam == "tarj":
+        return _sel_linea(seg, "tarjetas", TARJETAS_O, TARJETAS_U)
+    if fam == "corn":
+        return _sel_linea(seg, "córners", CORNERS, CORNERS)
+    return None
+
+
+def analizar_multi(texto: str, equipos):
+    t = _norm(texto)
+    disp_de = {}
+    for nn, fifa, disp in equipos:
+        disp_de.setdefault(fifa, disp)
+
+    apariciones = []
+    for nn, fifa, _d in equipos:
+        s = 0
+        while True:
+            p = t.find(nn, s)
+            if p < 0:
+                break
+            apariciones.append((p, fifa))
+            s = p + 1
+    apariciones.sort()
+
+    ocur = []
+    for kw, fam in TIPOS_MERCADO:
+        s = 0
+        while True:
+            p = t.find(kw, s)
+            if p < 0:
+                break
+            ocur.append((p, p + len(kw), fam))
+            s = p + 1
+    ocur.sort()
+
+    out = []
+    for idx, (p0, p1, fam) in enumerate(ocur):
+        prev_end = ocur[idx - 1][1] if idx > 0 else 0
+        partido = []
+        for pos, fifa in apariciones:
+            if pos >= p1 and fifa not in partido:
+                partido.append(fifa)
+            if len(partido) >= 2:
+                break
+        if len(partido) < 2:
+            continue
+        lf, vf = partido[0], partido[1]
+        mercado = _mercado_seg(t[prev_end:p0], fam, lf, vf, equipos)
+        if mercado:
+            out.append(((lf, disp_de.get(lf, lf)), (vf, disp_de.get(vf, vf)), mercado))
+    return out
