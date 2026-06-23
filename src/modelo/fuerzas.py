@@ -40,6 +40,16 @@ def _filas_historico(conn: sqlite3.Connection):
     ).fetchall()
 
 
+def _filas_mundial(conn: sqlite3.Connection):
+    return conn.execute(
+        "SELECT p.fecha, el.api_football_id h, ev.api_football_id a, r.goles_local gh, r.goles_visita ga "
+        "FROM resultados r JOIN partidos p ON r.partido_id=p.id "
+        "JOIN equipos el ON p.equipo_local_id=el.id JOIN equipos ev ON p.equipo_visita_id=ev.id "
+        "WHERE r.goles_local IS NOT NULL AND r.goles_visita IS NOT NULL "
+        "AND el.api_football_id IS NOT NULL AND ev.api_football_id IS NOT NULL"
+    ).fetchall()
+
+
 def mapa_elo(conn: sqlite3.Connection, cache_dir: Path) -> dict[int, float]:
     idx: dict[str, float] = {}
     for _code, nombre, elo, alias in EloRatings(cache_dir / "eloratings").ratings():
@@ -84,7 +94,8 @@ def construir_dataset(filas, elo_por_api: dict[int, float], min_partidos: int = 
 
 
 def cargar_partidos(conn: sqlite3.Connection, cache_dir: Path, min_partidos: int = 5):
-    return construir_dataset(_filas_historico(conn), mapa_elo(conn, cache_dir), min_partidos)
+    filas = list(_filas_historico(conn)) + list(_filas_mundial(conn))
+    return construir_dataset(filas, mapa_elo(conn, cache_dir), min_partidos)
 
 
 def ajustar(equipos, h, a, gh, ga, w, elo_norm, reg: float = 0.05) -> dict:
