@@ -198,6 +198,29 @@ def _dist_goles(matriz):
     return np.bincount((i + j).ravel(), weights=matriz.ravel())
 
 
+def _p_over_linea(dist, linea):
+    import math
+    n = int(math.floor(linea))
+    frac = round(linea - n, 2)
+    over = float(dist[n + 1:].sum())
+    under = float(dist[:n].sum())
+
+    def nopush(o, u):
+        return o / (o + u) if (o + u) > 0 else 0.5
+
+    if frac == 0.5:
+        return over
+    if frac == 0.0:
+        return nopush(over, under)
+    if frac == 0.25:
+        return 0.5 * (nopush(over, under) + over)
+    if frac == 0.75:
+        over1 = float(dist[n + 2:].sum())
+        under1 = float(dist[:n + 1].sum())
+        return 0.5 * (over + nopush(over1, under1))
+    return over
+
+
 def _tabla_valor(conn):
     conn.execute(
         "CREATE TABLE IF NOT EXISTS valor_obs ("
@@ -700,9 +723,8 @@ if pagina == "Analizar partido":
                 if onl and onv and onl[0] and onv[0]:
                     info = tot.get(frozenset({_norm(onl[0]), _norm(onv[0])}))
                     if info:
-                        import math
                         dist = _dist_goles(a.matriz)
-                        p_mod = float(dist[math.floor(info["linea"]) + 1:].sum())
+                        p_mod = _p_over_linea(dist, info["linea"])
                         st.markdown("####  Mercado de goles (Pinnacle, sin margen)")
                         mc1, mc2, mc3 = st.columns(3)
                         mc1.metric("Línea del mercado", f"{info['linea']:.2f}")
