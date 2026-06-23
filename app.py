@@ -554,14 +554,14 @@ def mostrar_analisis(a, ctx) -> None:
     if parley:
         st.markdown("#### 🎯 Parley sugerido (cada selección ≥ 68%)")
         st.table(pd.DataFrame([{"Selección": c, "Probabilidad": _pct(p), "Cuota mínima p/ valor": f"{1 / p:.2f}"} for c, p in parley]))
-        p_parley, _ = _prob_partido_combi(a, [MERCADOS_COMBI[c] for c, _ in parley])
+        p_parley, p_naive_parley = _prob_partido_combi(a, [MERCADOS_COMBI[c] for c, _ in parley])
         pm1, pm2 = st.columns(2)
-        pm1.metric("Probabilidad del parley", _pct(p_parley))
+        pm1.metric("Probabilidad del parley", _pct(p_parley), f"sin correlación: {_pct(p_naive_parley)}")
         pm2.metric("Cuota mínima del parley p/ valor", f"{1 / p_parley:.2f}" if p_parley > 0 else "—")
         st.caption(
-            "Cada selección supera el 68% individualmente. La **cuota mínima** es la cuota justa (1÷probabilidad): "
-            "por encima de ella hay valor. Si Betano paga **más** que la cuota mínima del parley, tiene EV positivo. "
-            "Ojo: al combinarlas la probabilidad cae (se multiplican) y el riesgo sube — un parley largo rara vez conserva valor."
+            "Cada selección supera el 68% individualmente. La probabilidad del parley **no es** el producto de las patas: "
+            "el modelo ajusta por la **correlación** entre los mercados de goles del mismo partido (por eso difiere del 'sin correlación'). "
+            "La **cuota mínima** es la cuota justa (1÷probabilidad): si Betano paga **más**, hay valor. Es el mismo cálculo que en 'Analizar apuesta'."
         )
 
     with st.expander("¿De dónde salen estos números? (fuentes y modelos)"):
