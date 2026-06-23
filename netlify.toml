@@ -1,0 +1,9 @@
+[build]
+  publish = "netlify_public"
+  command = ""
+
+[[redirects]]
+  from = "/*"
+  to = "https://botano---bot-apuestas-deportivas-namqeiwzjcwdcwdgugmsgz.streamlit.app/:splat"
+  status = 302
+  force = true
