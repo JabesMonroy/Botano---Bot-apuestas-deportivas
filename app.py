@@ -33,12 +33,18 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+def _plain(v):
+    if hasattr(v, "items"):
+        return {k: _plain(x) for k, x in v.items()}
+    return v
+
+
 try:
     _secrets = dict(st.secrets)
 except Exception:
     _secrets = {}
 for _k, _val in _secrets.items():
-    os.environ[_k] = _val if isinstance(_val, str) else json.dumps(_val, default=dict)
+    os.environ[_k] = _val if isinstance(_val, str) else json.dumps(_plain(_val))
 
 CFG = load_config()
 
