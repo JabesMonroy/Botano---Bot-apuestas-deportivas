@@ -63,8 +63,14 @@ def _ocr_google(imagen_bytes: bytes, api_key: str) -> str:
         "imageContext": {"languageHints": ["es"]},
     }]}
     r = httpx.post(f"https://vision.googleapis.com/v1/images:annotate?key={api_key}", json=body, timeout=40)
-    r.raise_for_status()
-    resp = r.json()["responses"][0]
+    try:
+        data = r.json()
+    except Exception:
+        data = {}
+    if r.status_code != 200:
+        msg = data.get("error", {}).get("message") or r.text[:300]
+        raise RuntimeError(f"Google Vision {r.status_code}: {msg}")
+    resp = data["responses"][0]
     if "error" in resp:
         raise RuntimeError(resp["error"].get("message", "error de Vision"))
     ann = resp.get("fullTextAnnotation")
