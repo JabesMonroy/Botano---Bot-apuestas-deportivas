@@ -665,7 +665,7 @@ def mercado_totales():
 
 st.sidebar.title("⚽ Botano")
 st.sidebar.caption("Mundial 2026")
-pagina = st.sidebar.radio("Menú", ["Analizar partido", "Analizar apuesta", "Armar Bet Builder", "Ranking de valor", "Glosario"])
+pagina = st.sidebar.radio("Menú", ["Analizar partido", "Analizar apuesta", "Armar Bet Builder", "Ranking de valor", "Fiabilidad del modelo", "Glosario"])
 st.sidebar.caption("Herramienta de análisis, no garantía de ganancia.")
 
 
@@ -1047,6 +1047,48 @@ elif pagina == "Ranking de valor":
         if st.button("🗑 Limpiar registro"):
             _limpiar_valor()
             st.rerun()
+
+elif pagina == "Fiabilidad del modelo":
+    st.title("Fiabilidad del modelo")
+    st.caption("Backtest out-of-sample: se entrena el modelo con datos antiguos y se prueba en partidos posteriores que nunca vio. Mide si acierta y, sobre todo, **dónde**.")
+    import json
+    ruta_bt = CFG.data_dir / "modelos" / "backtest.json"
+    if not ruta_bt.exists():
+        st.info("Aún no hay backtest. Corre `python -m scripts.backtest` (tarda ~1 min) y recarga.")
+    else:
+        bt = json.loads(ruta_bt.read_text(encoding="utf-8"))
+        st.markdown(f"Entrenado hasta **{bt['corte']}**, probado en **{bt['test']}** partidos posteriores.")
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("RPS modelo", bt["rps_modelo"], f"ingenuo {bt['rps_ingenuo']}", delta_color="off")
+        m2.metric("Mejora vs ingenuo", f"{bt['mejora_pct']:+.1f}%")
+        m3.metric("ECE (calibración)", bt["ece"])
+        m4.metric("Brier", bt["brier"])
+        st.caption("RPS y Brier: más bajo = mejor. 'Ingenuo' = predecir siempre las tasas base (local/empate/visita). ECE < 0.05 = probabilidades bien calibradas.")
+
+        st.markdown("####  Por dificultad del partido — el sesgo que importa")
+        nombres = {"facil": "Favorito claro", "medio": "Intermedio", "renido": "Parejo"}
+        st.table(pd.DataFrame([
+            {"Tipo": nombres.get(e["estrato"], e["estrato"]), "n": e["n"], "RPS modelo": e["rps_modelo"],
+             "RPS ingenuo": e["rps_base"], "Mejora": f"{(e['rps_base'] - e['rps_modelo']) / e['rps_base'] * 100:+.0f}%"}
+            for e in bt["estratos"]
+        ]))
+        fac = next((e for e in bt["estratos"] if e["estrato"] == "facil"), None)
+        ren = next((e for e in bt["estratos"] if e["estrato"] == "renido"), None)
+        if fac and ren:
+            mf = (fac["rps_base"] - fac["rps_modelo"]) / fac["rps_base"] * 100
+            mr = (ren["rps_base"] - ren["rps_modelo"]) / ren["rps_base"] * 100
+            st.warning(f"**El sesgo, cuantificado:** el modelo mejora **{mf:.0f}%** sobre lo trivial en partidos con favorito claro, pero solo **{mr:.0f}%** en partidos parejos. Su buena cifra global se apoya en los partidos fáciles; en los **igualados** —donde suele estar el valor— apenas supera lo trivial. **Desconfía más de sus probabilidades en partidos parejos.**")
+
+        st.markdown("####  Calibración (lo que dice vs lo que pasa)")
+        cal = pd.DataFrame(bt["calibracion"])
+        cal["ideal"] = cal["predicha"]
+        st.line_chart(cal.set_index("predicha")[["observada", "ideal"]])
+        st.caption("Si la línea 'observada' sigue a la 'ideal' (diagonal), las probabilidades son fiables: cuando el modelo dice 70%, ocurre ~70% de las veces.")
+
+        if "mundial" in bt:
+            mu = bt["mundial"]
+            st.markdown("####  Sobre el Mundial 2026 ya jugado (prueba natural)")
+            st.markdown(f"**{mu['n']}** partidos · RPS modelo **{mu['rps_modelo']}** vs uniforme {mu['rps_uniforme']} · Brier {mu['brier']}")
 
 elif pagina == "Glosario":
     st.title("Qué significa cada término")

@@ -36,3 +36,40 @@ def estrato(p) -> str:
     if fav < 0.45:
         return "renido"
     return "medio"
+
+
+def calibracion(registros, nbins: int = 10):
+    sump = [0.0] * nbins
+    sumo = [0.0] * nbins
+    cnt = [0] * nbins
+    for p, o in registros:
+        for k in range(3):
+            b = min(nbins - 1, int(p[k] * nbins))
+            sump[b] += p[k]
+            sumo[b] += 1.0 if o == k else 0.0
+            cnt[b] += 1
+    filas = []
+    for b in range(nbins):
+        if cnt[b]:
+            filas.append({
+                "rango": f"{b * 100 // nbins}-{(b + 1) * 100 // nbins}%",
+                "predicha": round(sump[b] / cnt[b], 4),
+                "observada": round(sumo[b] / cnt[b], 4),
+                "n": cnt[b],
+            })
+    return filas
+
+
+def ece(registros, nbins: int = 10) -> float:
+    cal = calibracion(registros, nbins)
+    tot = sum(f["n"] for f in cal)
+    return sum(f["n"] * abs(f["predicha"] - f["observada"]) for f in cal) / tot if tot else float("nan")
+
+
+def brier(registros) -> float:
+    s = 0.0
+    n = 0
+    for p, o in registros:
+        s += sum((p[k] - (1.0 if o == k else 0.0)) ** 2 for k in range(3))
+        n += 1
+    return s / n if n else float("nan")

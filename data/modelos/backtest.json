@@ -1,0 +1,151 @@
+{
+  "corte": "2024-06-07",
+  "train": 1337,
+  "test": 574,
+  "evaluables": 560,
+  "rps_modelo": 0.1666,
+  "rps_ingenuo": 0.2356,
+  "brier": 0.4969,
+  "ece": 0.0276,
+  "estratos": [
+    {
+      "estrato": "facil",
+      "n": 252,
+      "rps_modelo": 0.1119,
+      "rps_base": 0.2379
+    },
+    {
+      "estrato": "medio",
+      "n": 154,
+      "rps_modelo": 0.1985,
+      "rps_base": 0.217
+    },
+    {
+      "estrato": "renido",
+      "n": 154,
+      "rps_modelo": 0.2242,
+      "rps_base": 0.2503
+    }
+  ],
+  "calibracion": [
+    {
+      "rango": "0-10%",
+      "predicha": 0.0496,
+      "observada": 0.0345,
+      "n": 232
+    },
+    {
+      "rango": "10-20%",
+      "predicha": 0.151,
+      "observada": 0.1661,
+      "n": 277
+    },
+    {
+      "rango": "20-30%",
+      "predicha": 0.2507,
+      "observada": 0.2208,
+      "n": 394
+    },
+    {
+      "rango": "30-40%",
+      "predicha": 0.3425,
+      "observada": 0.3531,
+      "n": 286
+    },
+    {
+      "rango": "40-50%",
+      "predicha": 0.4448,
+      "observada": 0.4929,
+      "n": 140
+    },
+    {
+      "rango": "50-60%",
+      "predicha": 0.5458,
+      "observada": 0.5051,
+      "n": 99
+    },
+    {
+      "rango": "60-70%",
+      "predicha": 0.646,
+      "observada": 0.6098,
+      "n": 82
+    },
+    {
+      "rango": "70-80%",
+      "predicha": 0.7489,
+      "observada": 0.8356,
+      "n": 73
+    },
+    {
+      "rango": "80-90%",
+      "predicha": 0.849,
+      "observada": 0.8983,
+      "n": 59
+    },
+    {
+      "rango": "90-100%",
+      "predicha": 0.9452,
+      "observada": 0.9211,
+      "n": 38
+    }
+  ],
+  "mejora_pct": 29.3,
+  "mundial": {
+    "n": 38,
+    "rps_modelo": 0.1443,
+    "rps_uniforme": 0.2208,
+    "brier": 0.5125,
+    "estratos": [
+      {
+        "estrato": "facil",
+        "n": 17,
+        "rps_modelo": 0.1,
+        "rps_base": 0.219
+      },
+      {
+        "estrato": "medio",
+        "n": 9,
+        "rps_modelo": 0.1353,
+        "rps_base": 0.2222
+      },
+      {
+        "estrato": "renido",
+        "n": 12,
+        "rps_modelo": 0.2138,
+        "rps_base": 0.2222
+      }
+    ],
+    "calibracion": [
+      {
+        "rango": "0-20%",
+        "predicha": 0.1196,
+        "observada": 0.0278,
+        "n": 36
+      },
+      {
+        "rango": "20-40%",
+        "predicha": 0.3042,
+        "observada": 0.4043,
+        "n": 47
+      },
+      {
+        "rango": "40-60%",
+        "predicha": 0.4859,
+        "observada": 0.5,
+        "n": 14
+      },
+      {
+        "rango": "60-80%",
+        "predicha": 0.6796,
+        "observada": 0.4545,
+        "n": 11
+      },
+      {
+        "rango": "80-100%",
+        "predicha": 0.8528,
+        "observada": 1.0,
+        "n": 6
+      }
+    ]
+  }
+}
