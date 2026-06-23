@@ -15,7 +15,22 @@ from src.modelo.valor import ev
 from src.plantillas import detectar_ausencias, multiplicadores
 from src.reporte import analizar_1x2, contexto_partido, narrativa, nivel_confianza
 
-st.set_page_config(page_title="Botano · Mundial 2026", page_icon="⚽", layout="wide")
+st.set_page_config(page_title="Botano · Mundial 2026", page_icon="⚽", layout="wide", initial_sidebar_state="auto")
+
+st.markdown(
+    """
+    <style>
+    @media (max-width: 640px) {
+        .block-container { padding: 2.6rem 0.7rem 1rem 0.7rem; }
+        h1 { font-size: 1.6rem; }
+        h2 { font-size: 1.3rem; }
+        [data-testid="stMetricValue"] { font-size: 1.2rem; }
+    }
+    [data-testid="stDataFrame"] { width: 100%; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 try:
     _secrets = dict(st.secrets)
@@ -903,7 +918,7 @@ elif pagina == "Analizar apuesta":
             conn.close()
             if ok and filas_res:
                 st.markdown("**Valor por selección (probabilidad del modelo vs cuota real de Betano)**")
-                st.table(pd.DataFrame(filas_res))
+                st.dataframe(pd.DataFrame(filas_res), hide_index=True, use_container_width=True)
                 m1, m2, m3 = st.columns(3)
                 m1.metric("Prob. de la combinada", _pct(p_corr))
                 m2.metric("Cuota justa del modelo", f"{1 / p_corr:.2f}" if p_corr > 0 else "—")
@@ -1003,7 +1018,7 @@ elif pagina == "Armar Bet Builder":
         else:
             if not r["cumple"]:
                 st.warning(f"No llegué al mínimo (≥{n_min} mercados y total > {total_min}). Esto es lo más cercano; baja el total mínimo o usa 'varios partidos'.")
-            st.table(pd.DataFrame(r["filas"]))
+            st.dataframe(pd.DataFrame(r["filas"]), hide_index=True, use_container_width=True)
             m1, m2, m3 = st.columns(3)
             m1.metric("Mercados", r["n"])
             m2.metric("Cuota total (justa)", f"{r['cuota']:.2f}")
@@ -1083,11 +1098,11 @@ elif pagina == "Fiabilidad del modelo":
 
         st.markdown("####  Por dificultad del partido — el sesgo que importa")
         nombres = {"facil": "Favorito claro", "medio": "Intermedio", "renido": "Parejo"}
-        st.table(pd.DataFrame([
+        st.dataframe(pd.DataFrame([
             {"Tipo": nombres.get(e["estrato"], e["estrato"]), "n": e["n"], "RPS modelo": e["rps_modelo"],
              "RPS ingenuo": e["rps_base"], "Mejora": f"{(e['rps_base'] - e['rps_modelo']) / e['rps_base'] * 100:+.0f}%"}
             for e in bt["estratos"]
-        ]))
+        ]), hide_index=True, use_container_width=True)
         fac = next((e for e in bt["estratos"] if e["estrato"] == "facil"), None)
         ren = next((e for e in bt["estratos"] if e["estrato"] == "renido"), None)
         if fac and ren:
@@ -1104,12 +1119,12 @@ elif pagina == "Fiabilidad del modelo":
         if "over_under" in bt:
             st.markdown("####  Over/Under (goles): ¿el modelo aporta?")
             ou = bt["over_under"]
-            st.table(pd.DataFrame([
+            st.dataframe(pd.DataFrame([
                 {"Línea": f"Más de {L}", "Over real": _pct(d["tasa_over_real"]), "Over modelo": _pct(d["tasa_over_modelo"]),
                  "Brier modelo": d["brier_modelo"], "Brier base": d["brier_base"],
                  "¿Aporta?": "sí" if d["brier_modelo"] < d["brier_base"] else "NO"}
                 for L, d in ou.items()
-            ]))
+            ]), hide_index=True, use_container_width=True)
             todos_peor = all(d["brier_modelo"] >= d["brier_base"] for d in ou.values())
             _sesgos = [d["tasa_over_real"] - d["tasa_over_modelo"] for d in ou.values()]
             sesgo = sum(_sesgos) / len(_sesgos) if _sesgos else 0.0
