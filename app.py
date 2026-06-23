@@ -270,6 +270,24 @@ def params_tiros():
     return 0.108, 0.32
 
 
+@st.cache_data(show_spinner=False)
+def params_corners():
+    import json
+    ruta = CFG.data_dir / "modelos" / "corners.json"
+    if ruta.exists():
+        d = json.loads(ruta.read_text(encoding="utf-8"))
+        return d.get("intercepto", 0.18), d.get("pendiente", 0.57)
+    return 0.18, 0.57
+
+
+def _corners_equipo(a):
+    if not a.corners_esp or (a.lh + a.la) <= 0:
+        return None, None
+    a0, b = params_corners()
+    share = min(0.85, max(0.15, a0 + b * (a.lh / (a.lh + a.la))))
+    return a.corners_esp * share, a.corners_esp * (1 - share)
+
+
 @st.cache_data(show_spinner="Consultando estadísticas del árbitro...")
 def tasa_arbitro(nombre: str):
     if not nombre:
@@ -424,7 +442,17 @@ def mostrar_analisis(a, ctx) -> None:
         oc = over_under(a.corners_esp, [3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5])
         col_c.markdown("**Córners totales**")
         col_c.dataframe(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in oc.items()]), hide_index=True, use_container_width=True)
-        col_c.caption(f"Debido al dominio esperado: {a.nombre_local} es _{_estilo(pl).split(',')[0]}_ y {a.nombre_visita} _{_estilo(pv).split(',')[0]}_; cuanto más ofensivo, más córners genera.")
+        cl_esp, cv_esp = _corners_equipo(a)
+        if cl_esp is not None:
+            col_c.markdown("**Córners por equipo** (reparto según el dominio)")
+            filas_ce = []
+            for nombre, esp in ((a.nombre_local, cl_esp), (a.nombre_visita, cv_esp)):
+                oce = over_under(esp, [2.5, 3.5, 4.5, 5.5])
+                fila = {"Equipo": nombre, "Esperados": f"{esp:.1f}"}
+                fila.update({f"+{l}": _pct(p) for l, p in oce.items()})
+                filas_ce.append(fila)
+            col_c.dataframe(pd.DataFrame(filas_ce), hide_index=True, use_container_width=True)
+            col_c.caption(f"El **reparto** sí depende del dominio (corr 0.49 en datos de StatsBomb): {a.nombre_local} {cl_esp:.1f} vs {cv_esp:.1f} {a.nombre_visita}. El **total** es más ruidoso, por eso se mantiene en el promedio.")
     if a.tarjetas_esp:
         ot = over_under(tarjetas_final, [0.5, 1.5, 2.5, 3.5, 4.5, 5.5])
         col_t.markdown("**Tarjetas totales**")
