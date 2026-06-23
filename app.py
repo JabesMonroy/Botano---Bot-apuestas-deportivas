@@ -694,8 +694,9 @@ elif pagina == "Analizar apuesta":
                 st.text(txt)
         if any("anotar en cualquier" in t.lower() or "marcar en cualquier" in t.lower() for t in textos):
             st.warning("Detecté mercado(s) de **goleador** (p. ej. *Anotar en cualquier momento*). El modelo Dixon-Coles no estima goles por jugador, así que **no se incluyen** en el cálculo: valóralos aparte.")
+        cuota_detectada = next((c for c in (_lm.cuota_total(t) for t in textos) if c), 0.0) or 0.0
         vistas, filas_init = set(), []
-        for loc, vis, m in detectadas:
+        for loc, vis, m, cu in detectadas:
             clave = (loc[0], vis[0], m)
             if clave not in vistas:
                 vistas.add(clave)
@@ -703,27 +704,34 @@ elif pagina == "Analizar apuesta":
                     "Local": next((n for n in NOMBRES if EQUIPOS[n] == loc[0]), NOMBRES[0]),
                     "Visitante": next((n for n in NOMBRES if EQUIPOS[n] == vis[0]), NOMBRES[1]),
                     "Mercado": m,
+                    "Cuota Betano": float(cu) if cu else 0.0,
                 })
         if not filas_init:
             st.warning("No detecté partidos con claridad. Añade las filas a mano en la tabla de abajo.")
-            filas_init = [{"Local": NOMBRES[0], "Visitante": NOMBRES[1], "Mercado": list(MERCADOS_COMBI)[0]}]
-        st.markdown("**Selecciones detectadas** — corrige equipos/mercados o añade filas (botón +):")
+            filas_init = [{"Local": NOMBRES[0], "Visitante": NOMBRES[1], "Mercado": list(MERCADOS_COMBI)[0], "Cuota Betano": 0.0}]
+        st.markdown("**Selecciones detectadas** — corrige equipos/mercados/cuota o añade filas (botón +):")
         editor = st.data_editor(
             pd.DataFrame(filas_init), num_rows="dynamic", hide_index=True, use_container_width=True, key="multi_editor",
             column_config={
                 "Local": st.column_config.SelectboxColumn(options=NOMBRES, required=True),
                 "Visitante": st.column_config.SelectboxColumn(options=NOMBRES, required=True),
                 "Mercado": st.column_config.SelectboxColumn(options=list(MERCADOS_COMBI), required=True),
+                "Cuota Betano": st.column_config.NumberColumn(format="%.2f", help="Cuota de Betano de la selección (o del Bet Builder). 0 = no la tengo."),
             },
         )
-        cuota_x = st.number_input("Cuota combinada de Betano (0 = no la tengo)", 0.0, 100000.0, 0.0, step=0.05, key="multi_cuota")
+        cuota_x = st.number_input("Cuota TOTAL de la combinada en Betano (0 = no la tengo)", 0.0, 100000.0, float(cuota_detectada), step=0.05, key="multi_cuota")
         if st.button("Calcular combinada", type="primary", key="multi_calc"):
             grupos: dict = {}
+            cuotas_item: dict = {}
             for _, fila in editor.iterrows():
                 if fila["Local"] in EQUIPOS and fila["Visitante"] in EQUIPOS and fila["Mercado"] in MERCADOS_COMBI:
-                    grupos.setdefault((EQUIPOS[fila["Local"]], EQUIPOS[fila["Visitante"]]), []).append(fila["Mercado"])
+                    clave_p = (EQUIPOS[fila["Local"]], EQUIPOS[fila["Visitante"]])
+                    grupos.setdefault(clave_p, []).append(fila["Mercado"])
+                    cu = fila.get("Cuota Betano", 0) or 0
+                    if cu > 1 and clave_p not in cuotas_item:
+                        cuotas_item[clave_p] = float(cu)
             conn = connect(CFG.db_path)
-            p_corr, fiable, pares, ok = 1.0, True, [], True
+            p_corr, fiable, filas_res, ok = 1.0, True, [], True
             for (l, v), mers in grupos.items():
                 a = analizar_1x2(conn, CFG.data_dir, l, v)
                 if a is None:
@@ -733,18 +741,29 @@ elif pagina == "Analizar apuesta":
                 corr, _ = _prob_partido_combi(a, [MERCADOS_COMBI[m] for m in mers])
                 p_corr *= corr
                 fiable = fiable and a.fiable
-                for m in mers:
-                    pares.append((f"{a.nombre_local}-{a.nombre_visita}: {m}", _prob_individual(a, MERCADOS_COMBI[m])))
+                cu_item = cuotas_item.get((l, v))
+                ev_item = ev(corr, cu_item) if (cu_item and a.fiable) else None
+                filas_res.append({
+                    "Partido": f"{a.nombre_local}-{a.nombre_visita}",
+                    "Mercado(s)": ", ".join(mers),
+                    "Prob. modelo": _pct(corr),
+                    "Cuota Betano": f"{cu_item:.2f}" if cu_item else "—",
+                    "Cuota justa": f"{1 / corr:.2f}" if corr > 0 else "—",
+                    "EV": f"{ev_item:+.1%}" if ev_item is not None else ("n/f" if cu_item else "—"),
+                })
             conn.close()
-            if ok and pares:
-                st.markdown("**Desglose: cómo baja con cada selección**")
-                st.table(_desglose(pares))
-                m1, m2 = st.columns(2)
-                m1.metric("Probabilidad de la combinada", _pct(p_corr))
+            if ok and filas_res:
+                st.markdown("**Valor por selección (probabilidad del modelo vs cuota real de Betano)**")
+                st.table(pd.DataFrame(filas_res))
+                m1, m2, m3 = st.columns(3)
+                m1.metric("Prob. de la combinada", _pct(p_corr))
                 m2.metric("Cuota justa del modelo", f"{1 / p_corr:.2f}" if p_corr > 0 else "—")
                 if cuota_x and cuota_x > 1:
-                    st.metric("Valor (EV)", f"{ev(p_corr, cuota_x):+.3f}" if fiable else "n/f")
-                st.caption("Tiene valor solo si tu cuota de Betano supera la cuota justa del modelo.")
+                    m3.metric("EV de la combinada", f"{ev(p_corr, cuota_x):+.1%}" if fiable else "n/f")
+                    st.caption(f"Betano paga **{cuota_x:.2f}** vs cuota justa **{1 / p_corr:.2f}**. " + ("Tiene valor si Betano paga más que la justa." if fiable else "Modelo poco fiable en algún partido: EV no válido."))
+                buenas = [f for f in filas_res if f["EV"] not in ("—", "n/f") and not f["EV"].startswith("-")]
+                if buenas:
+                    st.success("✅ Selecciones con valor (EV+): " + " · ".join(f"{f['Partido']} {f['Mercado(s)']} ({f['EV']})" for f in buenas))
 
     st.divider()
     with st.expander("✍️ Armar la combinada manualmente (incluye varios partidos)"):

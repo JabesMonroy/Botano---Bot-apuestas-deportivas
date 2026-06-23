@@ -192,6 +192,29 @@ def _detectar_partidos(t: str, equipos, tipos_pos):
     return partidos
 
 
+def _decimales_cuota(t: str):
+    return [(float(m.group(1).replace(",", ".")), m.start())
+            for m in re.finditer(r"(?<!\d)(\d{1,2}[.,]\d{2})(?!\d)", t)]
+
+
+def cuota_total(texto: str):
+    t = _norm(texto)
+    dec = _decimales_cuota(t)
+    if not dec:
+        return None
+    m = re.search(r"combinada", t)
+    if m:
+        post = [v for v, p in dec if p > m.start()]
+        if post:
+            return post[0]
+    return dec[0][0]
+
+
+def _cuota_item(t: str, pos_ini: int):
+    dec = [v for v, p in _decimales_cuota(t) if pos_ini - 70 <= p < pos_ini and 1.01 <= v <= 100]
+    return dec[-1] if dec else None
+
+
 def analizar_multi(texto: str, equipos):
     t = _norm(texto)
     disp_de = {}
@@ -214,16 +237,16 @@ def analizar_multi(texto: str, equipos):
     for p0, p1, fam in ocur:
         simple = next((pp for pp in partidos if 0 <= pp[0] - p1 < 30), None)
         if simple:
-            lf, vf = simple[2], simple[3]
+            lf, vf, pos_ini = simple[2], simple[3], simple[0]
         else:
             antes = [pp for pp in partidos if pp[1] <= p0]
             if not antes:
                 prev = p1
                 continue
             bb = max(antes, key=lambda pp: pp[1])
-            lf, vf = bb[2], bb[3]
+            lf, vf, pos_ini = bb[2], bb[3], bb[0]
         mercado = _mercado_seg(t[prev:p0], fam, lf, vf, equipos)
         if mercado:
-            out.append(((lf, disp_de.get(lf, lf)), (vf, disp_de.get(vf, vf)), mercado))
+            out.append(((lf, disp_de.get(lf, lf)), (vf, disp_de.get(vf, vf)), mercado, _cuota_item(t, pos_ini)))
         prev = p1
     return out
