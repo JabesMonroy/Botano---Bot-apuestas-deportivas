@@ -8,5 +8,6 @@ lxml>=5.2
 streamlit>=1.36
 pandas>=2.2
 pillow>=10.0
-winocr>=0.0.14
+winocr>=0.0.14 ; platform_system == "Windows"
+google-cloud-vision>=3.4 ; platform_system != "Windows"
 streamlit-paste-button>=0.1.2

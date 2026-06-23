@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -14,6 +16,14 @@ from src.plantillas import detectar_ausencias, multiplicadores
 from src.reporte import analizar_1x2, contexto_partido, narrativa, nivel_confianza
 
 st.set_page_config(page_title="Botano · Mundial 2026", page_icon="⚽", layout="wide")
+
+try:
+    _secrets = dict(st.secrets)
+except Exception:
+    _secrets = {}
+for _k, _val in _secrets.items():
+    os.environ[_k] = str(_val)
+
 CFG = load_config()
 
 
@@ -793,6 +803,9 @@ elif pagina == "Analizar apuesta":
                         m2.metric("Cuota justa del modelo", f"{1 / corr:.2f}" if corr > 0 else "—")
                         if cuota and cuota > 1:
                             st.metric("Valor (EV)", f"{ev(corr, cuota):+.3f}" if a.fiable else "n/f")
+                        if len(mer_sel) == 1 and cuota and cuota > 1:
+                            _guardar_valor([(EQUIPOS[loc], EQUIPOS[vis], mer_sel[0], cuota)])
+                            st.caption("💾 Selección guardada en el **Ranking de valor**.")
                         st.info(f"**Por qué parece bajo:** la combinada se cumple solo si ocurren **las {len(mer_sel)} selecciones a la vez**, así que sus probabilidades se multiplican. Cada pata añadida baja la probabilidad total y sube la cuota. Tiene valor solo si tu cuota supera la justa del modelo.")
 
     st.divider()
@@ -1010,7 +1023,10 @@ elif pagina == "Ranking de valor":
                "Solo partidos por jugarse; cada EV se recalcula con el modelo actual.")
     registros = _cargar_valor()
     if not registros:
-        st.info("Aún no hay datos. Pega capturas en **Analizar apuesta** y pulsa Calcular: las selecciones simples con cuota se guardan aquí automáticamente.")
+        st.info("Aún no hay selecciones guardadas. Se guardan **automáticamente** cuando en **Analizar apuesta** calculas: "
+                "(a) una apuesta sencilla de **1 solo mercado** con su cuota de Betano, o "
+                "(b) una combinada donde algún partido lleva **un único mercado** con cuota. "
+                "Clave: la **cuota de Betano** de esa selección debe estar puesta (no en 0) antes de pulsar Calcular.")
     else:
         conn = connect(CFG.db_path)
         por_jugar = {(r["l"], r["v"]) for r in conn.execute(
@@ -1035,7 +1051,7 @@ elif pagina == "Ranking de valor":
         for f in filas:
             del f["_ev"]
         if not filas:
-            st.info("No hay selecciones de partidos por jugarse (puede que ya se hayan jugado). Pega capturas nuevas.")
+            st.info(f"Tienes **{len(registros)}** selección(es) guardada(s), pero todas son de partidos que **ya se jugaron** (el ranking solo muestra los próximos). Pega capturas de partidos por venir.")
         else:
             st.dataframe(pd.DataFrame(filas), hide_index=True, use_container_width=True)
             buenas = [f for f in filas if f["EV"] != "n/f" and not f["EV"].startswith("-")]
@@ -1095,7 +1111,8 @@ elif pagina == "Fiabilidad del modelo":
                 for L, d in ou.items()
             ]))
             todos_peor = all(d["brier_modelo"] >= d["brier_base"] for d in ou.values())
-            sesgo = media([d["tasa_over_real"] - d["tasa_over_modelo"] for d in ou.values()])
+            _sesgos = [d["tasa_over_real"] - d["tasa_over_modelo"] for d in ou.values()]
+            sesgo = sum(_sesgos) / len(_sesgos) if _sesgos else 0.0
             if todos_peor:
                 st.error(f"**El modelo NO aporta en Over/Under.** En las 3 líneas su Brier es igual o peor que predecir la tasa media: no distingue partidos de muchos/pocos goles mejor que el promedio. Además **subestima los goles** (~{sesgo * 100:.0f} pp menos overs de los que ocurren). Conclusión: usa el modelo para **1X2/resultado** (donde sí aporta +29%), **no para totales de goles**.")
             else:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import os
 import re
 import unicodedata
 
@@ -39,12 +40,29 @@ def _norm(t: str) -> str:
 
 
 def ocr(imagen_bytes: bytes) -> str:
+    cred = os.environ.get("GOOGLE_VISION_CREDENTIALS")
+    if cred:
+        return _ocr_google(imagen_bytes, cred)
     import winocr
     from PIL import Image
 
     img = Image.open(io.BytesIO(imagen_bytes)).convert("RGB")
     r = winocr.recognize_pil_sync(img, "es")
     return r["text"] if isinstance(r, dict) else r.text
+
+
+def _ocr_google(imagen_bytes: bytes, cred_json: str) -> str:
+    import json as _json
+
+    from google.cloud import vision
+    from google.oauth2 import service_account
+
+    creds = service_account.Credentials.from_service_account_info(_json.loads(cred_json))
+    client = vision.ImageAnnotatorClient(credentials=creds)
+    resp = client.text_detection(image=vision.Image(content=imagen_bytes))
+    if resp.error.message:
+        raise RuntimeError(resp.error.message)
+    return resp.full_text_annotation.text if resp.full_text_annotation else ""
 
 
 def _linea_cercana(n: int, disponibles: list[float]) -> float | None:
