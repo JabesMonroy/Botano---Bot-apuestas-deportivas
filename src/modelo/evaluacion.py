@@ -25,6 +25,36 @@ def prob_fuerzas(api_h: int, api_a: int, params: dict, ventaja: float = 0.0):
     return (m["1"], m["X"], m["2"])
 
 
+def prob_over(api_h: int, api_a: int, params: dict, lineas, ventaja: float = 0.0):
+    import numpy as np
+    res = lambdas_desde_fuerzas(api_h, api_a, params, Ajustes(), ventaja_local=ventaja)
+    if res is None:
+        return None
+    lh, la = res
+    m = matriz_marcadores(lh, la, ParametrosModelo(tasa_base=0.0, rho=params["rho"]))
+    n = m.shape[0]
+    i, j = np.meshgrid(np.arange(n), np.arange(n), indexing="ij")
+    dist = np.bincount((i + j).ravel(), weights=m.ravel())
+    return {L: float(dist[int(L) + 1:].sum()) for L in lineas}
+
+
+def calibracion_bin(registros, nbins: int = 10):
+    sump = [0.0] * nbins
+    sumo = [0.0] * nbins
+    cnt = [0] * nbins
+    for p, o in registros:
+        b = min(nbins - 1, int(p * nbins))
+        sump[b] += p
+        sumo[b] += o
+        cnt[b] += 1
+    return [{"rango": f"{b * 100 // nbins}-{(b + 1) * 100 // nbins}%", "predicha": round(sump[b] / cnt[b], 4),
+             "observada": round(sumo[b] / cnt[b], 4), "n": cnt[b]} for b in range(nbins) if cnt[b]]
+
+
+def brier_bin(registros) -> float:
+    return sum((p - o) ** 2 for p, o in registros) / len(registros) if registros else float("nan")
+
+
 def media(xs) -> float:
     return sum(xs) / len(xs) if xs else float("nan")
 

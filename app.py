@@ -1085,6 +1085,22 @@ elif pagina == "Fiabilidad del modelo":
         st.line_chart(cal.set_index("predicha")[["observada", "ideal"]])
         st.caption("Si la línea 'observada' sigue a la 'ideal' (diagonal), las probabilidades son fiables: cuando el modelo dice 70%, ocurre ~70% de las veces.")
 
+        if "over_under" in bt:
+            st.markdown("####  Over/Under (goles): ¿el modelo aporta?")
+            ou = bt["over_under"]
+            st.table(pd.DataFrame([
+                {"Línea": f"Más de {L}", "Over real": _pct(d["tasa_over_real"]), "Over modelo": _pct(d["tasa_over_modelo"]),
+                 "Brier modelo": d["brier_modelo"], "Brier base": d["brier_base"],
+                 "¿Aporta?": "sí" if d["brier_modelo"] < d["brier_base"] else "NO"}
+                for L, d in ou.items()
+            ]))
+            todos_peor = all(d["brier_modelo"] >= d["brier_base"] for d in ou.values())
+            sesgo = media([d["tasa_over_real"] - d["tasa_over_modelo"] for d in ou.values()])
+            if todos_peor:
+                st.error(f"**El modelo NO aporta en Over/Under.** En las 3 líneas su Brier es igual o peor que predecir la tasa media: no distingue partidos de muchos/pocos goles mejor que el promedio. Además **subestima los goles** (~{sesgo * 100:.0f} pp menos overs de los que ocurren). Conclusión: usa el modelo para **1X2/resultado** (donde sí aporta +29%), **no para totales de goles**.")
+            else:
+                st.success("El modelo aporta algo sobre la tasa media en al menos una línea de Over/Under.")
+
         if "mundial" in bt:
             mu = bt["mundial"]
             st.markdown("####  Sobre el Mundial 2026 ya jugado (prueba natural)")
