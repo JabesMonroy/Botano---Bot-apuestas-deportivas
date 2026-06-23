@@ -198,6 +198,45 @@ def _dist_goles(matriz):
     return np.bincount((i + j).ravel(), weights=matriz.ravel())
 
 
+def _tabla_valor(conn):
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS valor_obs ("
+        "local TEXT, visita TEXT, mercado TEXT, cuota REAL, fecha_obs TEXT, "
+        "PRIMARY KEY (local, visita, mercado))"
+    )
+
+
+def _guardar_valor(items):
+    from datetime import datetime
+    conn = connect(CFG.db_path)
+    _tabla_valor(conn)
+    ahora = datetime.now().isoformat(timespec="minutes")
+    for l, v, m, cu in items:
+        conn.execute(
+            "INSERT INTO valor_obs (local, visita, mercado, cuota, fecha_obs) VALUES (?,?,?,?,?) "
+            "ON CONFLICT(local, visita, mercado) DO UPDATE SET cuota=excluded.cuota, fecha_obs=excluded.fecha_obs",
+            (l, v, m, float(cu), ahora),
+        )
+    conn.commit()
+    conn.close()
+
+
+def _cargar_valor():
+    conn = connect(CFG.db_path)
+    _tabla_valor(conn)
+    rows = [(r["local"], r["visita"], r["mercado"], r["cuota"]) for r in conn.execute("SELECT local, visita, mercado, cuota FROM valor_obs").fetchall()]
+    conn.close()
+    return rows
+
+
+def _limpiar_valor():
+    conn = connect(CFG.db_path)
+    _tabla_valor(conn)
+    conn.execute("DELETE FROM valor_obs")
+    conn.commit()
+    conn.close()
+
+
 def _estilo(p) -> str:
     xg, xga = p.get("xg_fs"), p.get("xga_fs")
     if not xg or not xga:
@@ -574,7 +613,7 @@ def proximos_partidos():
 
 st.sidebar.title("⚽ Botano")
 st.sidebar.caption("Mundial 2026")
-pagina = st.sidebar.radio("Menú", ["Analizar partido", "Analizar apuesta", "Armar Bet Builder", "Glosario"])
+pagina = st.sidebar.radio("Menú", ["Analizar partido", "Analizar apuesta", "Armar Bet Builder", "Ranking de valor", "Glosario"])
 st.sidebar.caption("Herramienta de análisis, no garantía de ganancia.")
 
 
@@ -792,6 +831,10 @@ elif pagina == "Analizar apuesta":
                 buenas = [f for f in filas_res if f["EV"] not in ("—", "n/f") and not f["EV"].startswith("-")]
                 if buenas:
                     st.success("✅ Selecciones con valor (EV+): " + " · ".join(f"{f['Partido']} {f['Mercado(s)']} ({f['EV']})" for f in buenas))
+                simples = [(l, v, mers[0], cuotas_item[(l, v)]) for (l, v), mers in grupos.items() if len(mers) == 1 and (l, v) in cuotas_item]
+                if simples:
+                    _guardar_valor(simples)
+                    st.caption(f"💾 Guardé {len(simples)} selección(es) simple(s) con cuota en el **Ranking de valor**.")
 
     st.divider()
     with st.expander("✍️ Armar la combinada manualmente (incluye varios partidos)"):
@@ -891,6 +934,50 @@ elif pagina == "Armar Bet Builder":
                 st.caption("⚠ Algún partido diverge mucho del mercado (modelo poco fiable ahí); tómalo con cautela.")
             if r["varios"]:
                 st.caption("Combina varios partidos: el boost del 25% de Betano normalmente aplica solo a Bet Builders de un **mismo evento**. Esta combinada quizá no califique para el boost (sí es una combinada válida). Para el boost, usa 'Un solo partido'.")
+
+elif pagina == "Ranking de valor":
+    st.title("Ranking de valor")
+    st.caption("Las selecciones simples (cuota de Betano) que has pegado en 'Analizar apuesta', ordenadas por EV del modelo. "
+               "Solo partidos por jugarse; cada EV se recalcula con el modelo actual.")
+    registros = _cargar_valor()
+    if not registros:
+        st.info("Aún no hay datos. Pega capturas en **Analizar apuesta** y pulsa Calcular: las selecciones simples con cuota se guardan aquí automáticamente.")
+    else:
+        conn = connect(CFG.db_path)
+        por_jugar = {(r["l"], r["v"]) for r in conn.execute(
+            "SELECT el.fifa_code l, ev.fifa_code v FROM partidos p "
+            "JOIN equipos el ON p.equipo_local_id=el.id JOIN equipos ev ON p.equipo_visita_id=ev.id "
+            "WHERE p.estado IN ('TIMED','SCHEDULED')"
+        ).fetchall()}
+        filas = []
+        for l, v, m, cu in registros:
+            if (l, v) not in por_jugar or m not in MERCADOS_COMBI:
+                continue
+            a = analizar_1x2(conn, CFG.data_dir, l, v)
+            if a is None:
+                continue
+            p = _prob_individual(a, MERCADOS_COMBI[m])
+            e = ev(p, cu) if a.fiable else None
+            filas.append({"Partido": f"{a.nombre_local}-{a.nombre_visita}", "Mercado": m, "Prob. modelo": _pct(p),
+                          "Betano": f"{cu:.2f}", "Cuota justa": f"{1 / p:.2f}" if p > 0 else "—",
+                          "EV": f"{e:+.1%}" if e is not None else "n/f", "_ev": e if e is not None else -99})
+        conn.close()
+        filas.sort(key=lambda x: -x["_ev"])
+        for f in filas:
+            del f["_ev"]
+        if not filas:
+            st.info("No hay selecciones de partidos por jugarse (puede que ya se hayan jugado). Pega capturas nuevas.")
+        else:
+            st.dataframe(pd.DataFrame(filas), hide_index=True, use_container_width=True)
+            buenas = [f for f in filas if f["EV"] != "n/f" and not f["EV"].startswith("-")]
+            if buenas:
+                st.success(f"✅ {len(buenas)} selección(es) con valor (EV+). Las de arriba son las de mayor EV según el modelo.")
+            else:
+                st.warning("Ninguna selección guardada tiene EV positivo ahora mismo.")
+            st.caption("Recuerda: EV+ no garantiza ganar; el modelo no bate al mercado sharp en 1X2 (su ventaja está en mercados que Betano no afina, como córners/tarjetas).")
+        if st.button("🗑 Limpiar registro"):
+            _limpiar_valor()
+            st.rerun()
 
 elif pagina == "Glosario":
     st.title("Qué significa cada término")
