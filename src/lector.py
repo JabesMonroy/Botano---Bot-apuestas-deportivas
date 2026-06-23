@@ -40,9 +40,9 @@ def _norm(t: str) -> str:
 
 
 def ocr(imagen_bytes: bytes) -> str:
-    cred = os.environ.get("GOOGLE_VISION_CREDENTIALS")
-    if cred:
-        return _ocr_google(imagen_bytes, cred)
+    key = os.environ.get("GOOGLE_VISION_API_KEY")
+    if key:
+        return _ocr_google(imagen_bytes, key)
     import winocr
     from PIL import Image
 
@@ -51,28 +51,24 @@ def ocr(imagen_bytes: bytes) -> str:
     return r["text"] if isinstance(r, dict) else r.text
 
 
-def _cred_a_dict(cred):
-    if isinstance(cred, dict):
-        return cred
-    import json as _json
-    try:
-        return _json.loads(cred)
-    except Exception:
-        import ast
-        return ast.literal_eval(cred)
+def _ocr_google(imagen_bytes: bytes, api_key: str) -> str:
+    import base64
 
+    import httpx
 
-def _ocr_google(imagen_bytes: bytes, cred) -> str:
-    from google.cloud import vision
-    from google.oauth2 import service_account
-
-    info = _cred_a_dict(cred)
-    creds = service_account.Credentials.from_service_account_info(info)
-    client = vision.ImageAnnotatorClient(credentials=creds)
-    resp = client.text_detection(image=vision.Image(content=imagen_bytes))
-    if resp.error.message:
-        raise RuntimeError(resp.error.message)
-    return resp.full_text_annotation.text if resp.full_text_annotation else ""
+    b64 = base64.b64encode(imagen_bytes).decode()
+    body = {"requests": [{
+        "image": {"content": b64},
+        "features": [{"type": "TEXT_DETECTION"}],
+        "imageContext": {"languageHints": ["es"]},
+    }]}
+    r = httpx.post(f"https://vision.googleapis.com/v1/images:annotate?key={api_key}", json=body, timeout=40)
+    r.raise_for_status()
+    resp = r.json()["responses"][0]
+    if "error" in resp:
+        raise RuntimeError(resp["error"].get("message", "error de Vision"))
+    ann = resp.get("fullTextAnnotation")
+    return ann["text"] if ann else ""
 
 
 def _linea_cercana(n: int, disponibles: list[float]) -> float | None:

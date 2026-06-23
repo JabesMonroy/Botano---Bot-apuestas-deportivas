@@ -13,13 +13,15 @@ El repo ya está en GitHub e incluye la base de datos `data/bot.db`. Cuando actu
 (`python -m scripts.actualizar`, `estimar_fuerzas`, etc.), recuerda **commitear y subir `data/bot.db`**
 para que la versión web se actualice.
 
-## 2. Crear las credenciales de Google Vision (gratis)
+## 2. Crear la clave de Google Vision (gratis, muy simple)
 
 1. Entra en https://console.cloud.google.com/ y crea un proyecto (p. ej. "botano").
 2. Busca **Cloud Vision API** y pulsa **Habilitar**.
-3. Ve a **APIs y servicios → Credenciales → Crear credenciales → Cuenta de servicio**.
-4. Crea la cuenta (rol "Visor" basta). Entra en ella → pestaña **Claves → Agregar clave → JSON**.
-5. Se descarga un archivo `.json`. Lo necesitarás en el paso 4 (es gratis dentro de las 1.000 imágenes/mes).
+3. Ve a **APIs y servicios → Credenciales → Crear credenciales → Clave de API**.
+4. Copia la clave (una cadena tipo `AIza...`). La usarás en el paso 4.
+5. Recomendado: pulsa **Restringir clave** → en "Restricciones de API" elige solo **Cloud Vision API**.
+
+Es gratis dentro de las 1.000 imágenes/mes (uso personal no se acerca a ese límite).
 
 ## 3. Desplegar en Streamlit Cloud
 
@@ -29,29 +31,17 @@ para que la versión web se actualice.
 
 ## 4. Configurar los secretos (claves)
 
-En la app desplegada: **menú (⋮) → Settings → Secrets**. Pega esto (formato TOML), rellenando tus valores.
-Para Google, copia **cada campo** del `.json` del paso 2 bajo la sección `[GOOGLE_VISION_CREDENTIALS]`:
+En la app desplegada: **menú (⋮) → Settings → Secrets**. Pega esto (formato TOML), rellenando tus valores:
 
 ```toml
 API_FOOTBALL_KEY = "tu_clave"
 ODDS_API_KEY = "tu_clave"
 OPENWEATHER_KEY = "tu_clave"
 FOOTBALL_DATA_KEY = "tu_clave"
-
-[GOOGLE_VISION_CREDENTIALS]
-type = "service_account"
-project_id = "tu-proyecto"
-private_key_id = "..."
-private_key = "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-client_email = "...@tu-proyecto.iam.gserviceaccount.com"
-client_id = "..."
-auth_uri = "https://accounts.google.com/o/oauth2/auth"
-token_uri = "https://oauth2.googleapis.com/token"
-auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
-client_x509_cert_url = "..."
+GOOGLE_VISION_API_KEY = "AIza...tu_clave_del_paso_2"
 ```
 
-Importante: en `private_key`, deja los saltos como `\n` (tal cual vienen en el `.json`), todo en una sola línea entre comillas. Guarda; la app se reinicia y leerá las capturas con Google Vision.
+Guarda; la app se reinicia y leerá las capturas con Google Vision (vía su API REST, sin librerías pesadas).
 
 ## 5. Restringir el acceso a solo ti
 
@@ -66,6 +56,6 @@ Así solo tú entras, aunque la URL sea pública.
   haz commit de `data/bot.db` y súbelo; Streamlit Cloud redespliega solo.
 - **Ranking de valor**: en la nube el disco es efímero, así que el ranking se vacía si la app se reinicia
   (tras varios días inactiva). Es lo acordado; lo rehaces pegando capturas.
-- **OCR**: si no configuras `GOOGLE_VISION_CREDENTIALS`, en la nube el lector de capturas fallará
+- **OCR**: si no configuras `GOOGLE_VISION_API_KEY`, en la nube el lector de capturas fallará
   (winocr solo existe en Windows). En tu PC local sigue funcionando sin tocar nada.
 - **Cuota de Google Vision**: 1.000 imágenes/mes gratis. Uso personal no se acerca a ese límite.
