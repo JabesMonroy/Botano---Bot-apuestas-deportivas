@@ -13,15 +13,16 @@ El repo ya está en GitHub e incluye la base de datos `data/bot.db`. Cuando actu
 (`python -m scripts.actualizar`, `estimar_fuerzas`, etc.), recuerda **commitear y subir `data/bot.db`**
 para que la versión web se actualice.
 
-## 2. Crear la clave de Google Vision (gratis, muy simple)
+## 2. Obtener una clave de OCR.space (gratis, sin tarjeta)
 
-1. Entra en https://console.cloud.google.com/ y crea un proyecto (p. ej. "botano").
-2. Busca **Cloud Vision API** y pulsa **Habilitar**.
-3. Ve a **APIs y servicios → Credenciales → Crear credenciales → Clave de API**.
-4. Copia la clave (una cadena tipo `AIza...`). La usarás en el paso 4.
-5. Recomendado: pulsa **Restringir clave** → en "Restricciones de API" elige solo **Cloud Vision API**.
+Para leer las capturas en la nube usamos **OCR.space** (gratis, sin tarjeta de crédito):
 
-Es gratis dentro de las 1.000 imágenes/mes (uso personal no se acerca a ese límite).
+1. Entra en https://ocr.space/ocrapi/freekey
+2. Pon tu correo y recibes una **API key gratis** (25.000 imágenes/mes, sin tarjeta).
+3. La usarás en el paso 4 como `OCR_SPACE_API_KEY`.
+
+Alternativa sin ninguna clave: en la app puedes **pegar el texto** de la captura (lo copias con el OCR
+de tu propio móvil) en el recuadro de texto, y el bot lo procesa igual. No necesita OCR en el servidor.
 
 ## 3. Desplegar en Streamlit Cloud
 
@@ -38,10 +39,10 @@ API_FOOTBALL_KEY = "tu_clave"
 ODDS_API_KEY = "tu_clave"
 OPENWEATHER_KEY = "tu_clave"
 FOOTBALL_DATA_KEY = "tu_clave"
-GOOGLE_VISION_API_KEY = "AIza...tu_clave_del_paso_2"
+OCR_SPACE_API_KEY = "tu_clave_del_paso_2"
 ```
 
-Guarda; la app se reinicia y leerá las capturas con Google Vision (vía su API REST, sin librerías pesadas).
+Guarda; la app se reinicia y leerá las capturas con OCR.space. (Si prefieres no usar clave, pega el texto a mano.)
 
 ## 5. Restringir el acceso a solo ti
 
@@ -56,6 +57,6 @@ Así solo tú entras, aunque la URL sea pública.
   haz commit de `data/bot.db` y súbelo; Streamlit Cloud redespliega solo.
 - **Ranking de valor**: en la nube el disco es efímero, así que el ranking se vacía si la app se reinicia
   (tras varios días inactiva). Es lo acordado; lo rehaces pegando capturas.
-- **OCR**: si no configuras `GOOGLE_VISION_API_KEY`, en la nube el lector de capturas fallará
-  (winocr solo existe en Windows). En tu PC local sigue funcionando sin tocar nada.
+- **OCR**: en la nube, si no configuras `OCR_SPACE_API_KEY`, la subida de imagen fallará (winocr solo
+  existe en Windows) — pero siempre puedes **pegar el texto** a mano. En tu PC local sigue con winocr sin tocar nada.
 - **Cuota de Google Vision**: 1.000 imágenes/mes gratis. Uso personal no se acerca a ese límite.

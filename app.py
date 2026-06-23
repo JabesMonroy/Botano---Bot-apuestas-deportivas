@@ -774,6 +774,7 @@ elif pagina == "Analizar apuesta":
     from streamlit_paste_button import paste_image_button
     pegar = paste_image_button("📋 Pegar captura (Ctrl+V)", errors="ignore")
     archivo = st.file_uploader("…o sube el archivo (PNG/JPG)", type=["png", "jpg", "jpeg"])
+    texto_manual = st.text_area("…o pega aquí el texto de la captura (cópialo con el OCR de tu móvil: mantén pulsado sobre la imagen)", key="cap_texto", height=80)
     imagen_bytes = None
     if pegar.image_data is not None:
         import io as _io
@@ -782,18 +783,21 @@ elif pagina == "Analizar apuesta":
         imagen_bytes = _buf.getvalue()
     elif archivo:
         imagen_bytes = archivo.getvalue()
-    if imagen_bytes:
+    if imagen_bytes or texto_manual.strip():
         import importlib
 
         import src.lector as _lector
         importlib.reload(_lector)
-        analizar, ocr = _lector.analizar, _lector.ocr
-        try:
-            with st.spinner("Leyendo la imagen con OCR de Windows..."):
-                texto = ocr(imagen_bytes)
-        except Exception as exc:
-            st.error(f"No se pudo leer la imagen: {exc}")
-            texto = ""
+        analizar = _lector.analizar
+        if texto_manual.strip():
+            texto = texto_manual
+        else:
+            try:
+                with st.spinner("Leyendo la imagen..."):
+                    texto = _lector.ocr(imagen_bytes)
+            except Exception as exc:
+                st.error(f"No se pudo leer la imagen: {exc}")
+                texto = ""
         if texto:
             local, visita, detectados = analizar(texto, equipos_busqueda())
             with st.expander("Texto leído por el OCR (revisa si algo se detectó mal)"):
@@ -836,6 +840,7 @@ elif pagina == "Analizar apuesta":
     from streamlit_paste_button import paste_image_button
     pegar_m = paste_image_button("📋 Pegar captura (Ctrl+V)", errors="ignore", key="multi_paste")
     multi = st.file_uploader("…o sube el/los archivo(s) (PNG/JPG)", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key="multi_up")
+    texto_manual_m = st.text_area("…o pega aquí el texto de la combinada (cópialo con el OCR de tu móvil)", key="multi_texto", height=100)
     imagenes = []
     if pegar_m.image_data is not None:
         import io as _io2
@@ -844,13 +849,16 @@ elif pagina == "Analizar apuesta":
         imagenes.append(("(pegada)", _b.getvalue()))
     for f in multi or []:
         imagenes.append((f.name, f.getvalue()))
-    if imagenes:
+    if imagenes or texto_manual_m.strip():
         import importlib
 
         import src.lector as _lm
         importlib.reload(_lm)
         eqs = equipos_busqueda()
         detectadas, textos = [], []
+        if texto_manual_m.strip():
+            textos.append(texto_manual_m)
+            detectadas.extend(_lm.analizar_multi(texto_manual_m, eqs))
         for nombre, datos in imagenes:
             try:
                 with st.spinner(f"Leyendo {nombre}..."):

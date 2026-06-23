@@ -40,9 +40,9 @@ def _norm(t: str) -> str:
 
 
 def ocr(imagen_bytes: bytes) -> str:
-    key = os.environ.get("GOOGLE_VISION_API_KEY")
+    key = os.environ.get("OCR_SPACE_API_KEY")
     if key:
-        return _ocr_google(imagen_bytes, key)
+        return _ocr_space(imagen_bytes, key)
     import winocr
     from PIL import Image
 
@@ -51,30 +51,34 @@ def ocr(imagen_bytes: bytes) -> str:
     return r["text"] if isinstance(r, dict) else r.text
 
 
-def _ocr_google(imagen_bytes: bytes, api_key: str) -> str:
+def _ocr_space(imagen_bytes: bytes, api_key: str) -> str:
     import base64
 
     import httpx
 
     b64 = base64.b64encode(imagen_bytes).decode()
-    body = {"requests": [{
-        "image": {"content": b64},
-        "features": [{"type": "TEXT_DETECTION"}],
-        "imageContext": {"languageHints": ["es"]},
-    }]}
-    r = httpx.post(f"https://vision.googleapis.com/v1/images:annotate?key={api_key}", json=body, timeout=40)
+    r = httpx.post(
+        "https://api.ocr.space/parse/image",
+        data={
+            "apikey": api_key,
+            "language": "spa",
+            "OCREngine": "2",
+            "scale": "true",
+            "base64Image": "data:image/png;base64," + b64,
+        },
+        timeout=60,
+    )
     try:
         data = r.json()
     except Exception:
         data = {}
     if r.status_code != 200:
-        msg = data.get("error", {}).get("message") or r.text[:300]
-        raise RuntimeError(f"Google Vision {r.status_code}: {msg}")
-    resp = data["responses"][0]
-    if "error" in resp:
-        raise RuntimeError(resp["error"].get("message", "error de Vision"))
-    ann = resp.get("fullTextAnnotation")
-    return ann["text"] if ann else ""
+        raise RuntimeError(f"OCR.space {r.status_code}: {r.text[:200]}")
+    if data.get("IsErroredOnProcessing"):
+        em = data.get("ErrorMessage")
+        raise RuntimeError(em[0] if isinstance(em, list) and em else str(em))
+    res = data.get("ParsedResults") or []
+    return res[0].get("ParsedText", "") if res else ""
 
 
 def _linea_cercana(n: int, disponibles: list[float]) -> float | None:
