@@ -51,13 +51,14 @@ def ocr(imagen_bytes: bytes) -> str:
     return r["text"] if isinstance(r, dict) else r.text
 
 
-def _ocr_google(imagen_bytes: bytes, cred_json: str) -> str:
+def _ocr_google(imagen_bytes: bytes, cred) -> str:
     import json as _json
 
     from google.cloud import vision
     from google.oauth2 import service_account
 
-    creds = service_account.Credentials.from_service_account_info(_json.loads(cred_json))
+    info = cred if isinstance(cred, dict) else _json.loads(cred)
+    creds = service_account.Credentials.from_service_account_info(info)
     client = vision.ImageAnnotatorClient(credentials=creds)
     resp = client.text_detection(image=vision.Image(content=imagen_bytes))
     if resp.error.message:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 
 import numpy as np
@@ -37,7 +38,7 @@ try:
 except Exception:
     _secrets = {}
 for _k, _val in _secrets.items():
-    os.environ[_k] = str(_val)
+    os.environ[_k] = _val if isinstance(_val, str) else json.dumps(_val, default=dict)
 
 CFG = load_config()
 

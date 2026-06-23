@@ -29,7 +29,8 @@ para que la versión web se actualice.
 
 ## 4. Configurar los secretos (claves)
 
-En la app desplegada: **menú (⋮) → Settings → Secrets**. Pega esto (en formato TOML), rellenando tus valores:
+En la app desplegada: **menú (⋮) → Settings → Secrets**. Pega esto (formato TOML), rellenando tus valores.
+Para Google, copia **cada campo** del `.json` del paso 2 bajo la sección `[GOOGLE_VISION_CREDENTIALS]`:
 
 ```toml
 API_FOOTBALL_KEY = "tu_clave"
@@ -37,16 +38,20 @@ ODDS_API_KEY = "tu_clave"
 OPENWEATHER_KEY = "tu_clave"
 FOOTBALL_DATA_KEY = "tu_clave"
 
-GOOGLE_VISION_CREDENTIALS = '''
-{
-  "type": "service_account",
-  "project_id": "...",
-  ...pega aquí TODO el contenido del .json del paso 2...
-}
-'''
+[GOOGLE_VISION_CREDENTIALS]
+type = "service_account"
+project_id = "tu-proyecto"
+private_key_id = "..."
+private_key = "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+client_email = "...@tu-proyecto.iam.gserviceaccount.com"
+client_id = "..."
+auth_uri = "https://accounts.google.com/o/oauth2/auth"
+token_uri = "https://oauth2.googleapis.com/token"
+auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
+client_x509_cert_url = "..."
 ```
 
-Guarda. La app se reinicia y ya leerá las capturas con Google Vision.
+Importante: en `private_key`, deja los saltos como `\n` (tal cual vienen en el `.json`), todo en una sola línea entre comillas. Guarda; la app se reinicia y leerá las capturas con Google Vision.
 
 ## 5. Restringir el acceso a solo ti
 
