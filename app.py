@@ -611,6 +611,35 @@ def proximos_partidos():
     return out
 
 
+@st.cache_data(ttl=21600, show_spinner=False)
+def mercado_totales():
+    from src.lector import _norm
+    try:
+        from src.clients.odds_api import OddsApi
+        api = OddsApi(CFG.odds_api_key, CFG.cache_dir)
+        ev = api.odds("soccer_fifa_world_cup", regions="eu", markets="totals", bookmakers="pinnacle", ttl=21600)
+        api.close()
+    except Exception:
+        return {}
+    out = {}
+    for e in ev:
+        for b in e.get("bookmakers", []):
+            for mk in b.get("markets", []):
+                if mk["key"] != "totals":
+                    continue
+                ov = un = lin = None
+                for o in mk["outcomes"]:
+                    if o["name"] == "Over":
+                        ov, lin = o["price"], o.get("point")
+                    elif o["name"] == "Under":
+                        un = o["price"]
+                if ov and un and lin:
+                    out[frozenset({_norm(e["home_team"]), _norm(e["away_team"])})] = {
+                        "linea": lin, "p_over": (1 / ov) / (1 / ov + 1 / un),
+                    }
+    return out
+
+
 st.sidebar.title("⚽ Botano")
 st.sidebar.caption("Mundial 2026")
 pagina = st.sidebar.radio("Menú", ["Analizar partido", "Analizar apuesta", "Armar Bet Builder", "Ranking de valor", "Glosario"])
@@ -662,6 +691,24 @@ if pagina == "Analizar partido":
                 st.error("No hay datos para ese partido.")
             else:
                 mostrar_analisis(a, ctx)
+                from src.lector import _norm
+                conn = connect(CFG.db_path)
+                onl = conn.execute("SELECT odds_api_name FROM equipos WHERE fifa_code=?", (l,)).fetchone()
+                onv = conn.execute("SELECT odds_api_name FROM equipos WHERE fifa_code=?", (v,)).fetchone()
+                conn.close()
+                tot = mercado_totales()
+                if onl and onv and onl[0] and onv[0]:
+                    info = tot.get(frozenset({_norm(onl[0]), _norm(onv[0])}))
+                    if info:
+                        import math
+                        dist = _dist_goles(a.matriz)
+                        p_mod = float(dist[math.floor(info["linea"]) + 1:].sum())
+                        st.markdown("####  Mercado de goles (Pinnacle, sin margen)")
+                        mc1, mc2, mc3 = st.columns(3)
+                        mc1.metric("Línea del mercado", f"{info['linea']:.2f}")
+                        mc2.metric("Over según Pinnacle", _pct(info["p_over"]))
+                        mc3.metric("Over según el modelo", _pct(p_mod), f"{(p_mod - info['p_over']) * 100:+.0f} pp")
+                        st.caption("Valida el modelo de goles contra el **mercado sharp** (Pinnacle, quitado el margen). Si divergen mucho, el modelo discrepa del mercado — señal de cautela en goles, no de valor garantizado.")
 
 elif pagina == "Analizar apuesta":
     st.title("Analizar apuesta")
