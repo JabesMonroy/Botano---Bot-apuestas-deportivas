@@ -33,7 +33,9 @@ jobs:
           OPENWEATHER_KEY: ${{ secrets.OPENWEATHER_KEY }}
         run: |
           python -m scripts.actualizar
+          python -m scripts.ingestar_eventos || echo "ingestar_eventos falló; sigo sin los eventos nuevos"
           python -m scripts.estimar_fuerzas || echo "estimar_fuerzas falló; sigo con los datos actualizados"
+          python -m scripts.calibrar_sesgo || echo "calibrar_sesgo falló; se mantiene la corrección anterior"
 
       - name: Subir la base de datos actualizada
         run: |
