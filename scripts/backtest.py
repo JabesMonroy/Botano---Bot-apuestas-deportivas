@@ -33,7 +33,7 @@ def main() -> int:
     train, test = filas[:corte], filas[corte:]
     elo = mapa_elo(conn, cfg.cache_dir)
     ds = construir_dataset(train, elo, min_partidos=5)
-    params = ajustar(*ds[:7])
+    params = ajustar(*ds[:8])
 
     n = len(train)
     hw = sum(1 for r in train if r["gh"] > r["ga"])
@@ -84,7 +84,7 @@ def main() -> int:
     fz = cargar_fuerzas(cfg.data_dir)
     reg2 = []
     for r in _filas_mundial(conn):
-        ventaja = fz["gamma"] if False else 0.0
+        ventaja = fz["gamma"] if not r["neutral"] else 0.0
         p = prob_fuerzas(r["h"], r["a"], fz, ventaja)
         if p is not None:
             reg2.append((p, resultado(r["gh"], r["ga"])))
