@@ -1,0 +1,14 @@
+{
+  "coefs": [
+    1.4775559359979449,
+    -1.5559701473855783,
+    0.9200804461835279,
+    -1.2065362575937169
+  ],
+  "n_tiros": 1430,
+  "n_partidos": 64,
+  "conversion_real": 0.1063,
+  "xg_medio_modelo": 0.1063,
+  "corr_vs_statsbomb": 0.8066,
+  "fuente": "StatsBomb Open Data · FIFA World Cup 2022 (sin penales)"
+}
