@@ -42,6 +42,21 @@ def matriz_marcadores(lh: float, la: float, par: ParametrosModelo) -> np.ndarray
     return m / m.sum()
 
 
+def corregir_empate_matriz(m: np.ndarray, delta: float) -> np.ndarray:
+    if delta == 0.0:
+        return m
+    px = float(np.trace(m))
+    resto = 1.0 - px
+    objetivo = min(max(px - delta, 1e-6), 1.0 - 1e-6)
+    if px <= 0.0 or resto <= 0.0:
+        return m
+    out = m.copy()
+    diag = np.eye(m.shape[0], dtype=bool)
+    out[diag] *= objetivo / px
+    out[~diag] *= (1.0 - objetivo) / resto
+    return out
+
+
 def mercados(m: np.ndarray) -> dict[str, float]:
     n = m.shape[0]
     total = np.add.outer(np.arange(n), np.arange(n))
