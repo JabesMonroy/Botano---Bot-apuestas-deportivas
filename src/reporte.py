@@ -6,15 +6,17 @@ from pathlib import Path
 
 import numpy as np
 
-from src.modelo.dixon_coles import Ajustes, ParametrosModelo, lambdas, matriz_marcadores, mercados
+from src.modelo.dixon_coles import Ajustes, ParametrosModelo, corregir_empate_matriz, lambdas, matriz_marcadores, mercados
 from src.modelo.fuerzas import cargar as cargar_fuerzas
 from src.modelo.fuerzas import lambdas_desde_fuerzas
 from src.modelo.parametros import HOSTS
 from src.modelo.parametros import cargar as cargar_par
-from src.modelo.secundarios import over_under
-from src.modelo.valor import corregir_empate, ev, mezclar_1x2, sin_vig
+from src.modelo.secundarios import over_under, over_under_nb
+from src.modelo.valor import ev, mezclar_1x2, sin_vig
 
 UMBRAL_DIVERGENCIA = 0.18
+W_MERCADO_RENIDO = 0.80
+K_PRIOR_WC = 3.0
 
 
 @dataclass
@@ -38,13 +40,56 @@ class Analisis:
     tarjetas_esp: float | None
     perfil_local: dict
     perfil_visita: dict
+    rho: float = 0.0
+    saques_local: float | None = None
+    saques_visita: float | None = None
+    tarjetas_ratio_var: float = 1.0
+    n_wc: int = 0
+
+
+def _stats_wc(conn: sqlite3.Connection, equipo_id: int) -> dict | None:
+    try:
+        fila = conn.execute(
+            "SELECT COUNT(*) n, AVG(e.amarillas + e.rojas) tarjetas, AVG(e.saques_meta) saques, AVG(t.corners_total) corners_total "
+            "FROM estadisticas_mundial e JOIN "
+            "(SELECT partido_id, SUM(corners) corners_total FROM estadisticas_mundial GROUP BY partido_id) t "
+            "ON t.partido_id = e.partido_id WHERE e.equipo_id = ?",
+            (equipo_id,),
+        ).fetchone()
+    except sqlite3.OperationalError:
+        return None
+    return dict(fila) if fila and fila["n"] else None
+
+
+def _medias_torneo(conn: sqlite3.Connection) -> dict | None:
+    try:
+        filas = conn.execute(
+            "SELECT SUM(amarillas + rojas) tarjetas, SUM(saques_meta) saques FROM estadisticas_mundial GROUP BY partido_id"
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return None
+    if not filas:
+        return None
+    tarjetas = [f["tarjetas"] for f in filas]
+    m = sum(tarjetas) / len(tarjetas)
+    var = sum((t - m) ** 2 for t in tarjetas) / max(len(tarjetas) - 1, 1)
+    saques = sum(f["saques"] for f in filas) / (2 * len(filas))
+    return {"tarjetas_ratio_var": (var / m if m > 0 else 1.0), "saques_equipo": saques}
+
+
+def _mezcla(prior: float | None, obs: float | None, n: float) -> float | None:
+    if obs is None:
+        return prior
+    if prior is None:
+        return obs
+    return (n * obs + K_PRIOR_WC * prior) / (n + K_PRIOR_WC)
 
 
 def analizar_1x2(conn: sqlite3.Connection, data_dir: Path, local: str, visita: str, ajustes: Ajustes | None = None) -> Analisis | None:
     eq = {
         r["fifa_code"]: r
         for r in conn.execute(
-            "SELECT fifa_code, nombre, confederacion, elo, api_football_id, valor_plantilla, "
+            "SELECT id, fifa_code, nombre, confederacion, elo, api_football_id, valor_plantilla, "
             "xg_fs, xga_fs, corners_favor, tarjetas_partido FROM equipos"
         )
     }
@@ -68,10 +113,11 @@ def analizar_1x2(conn: sqlite3.Connection, data_dir: Path, local: str, visita: s
         lh, la = lambdas(eq[local]["elo"], eq[visita]["elo"], par, aj)
         delta, w_mercado, metodo = 0.0, 0.5, "elo"
 
-    matriz = matriz_marcadores(lh, la, par)
+    matriz = corregir_empate_matriz(matriz_marcadores(lh, la, par), delta)
     prob = mercados(matriz)
-    p1, px, p2 = corregir_empate(prob["1"], prob["X"], prob["2"], delta)
-    modelo = {"1": p1, "X": px, "2": p2}
+    modelo = {"1": prob["1"], "X": prob["X"], "2": prob["2"]}
+    if max(modelo["1"], modelo["2"]) < 0.45:
+        w_mercado = max(w_mercado, W_MERCADO_RENIDO)
 
     partido = conn.execute(
         "SELECT p.id FROM partidos p JOIN equipos el ON p.equipo_local_id=el.id "
@@ -94,13 +140,35 @@ def analizar_1x2(conn: sqlite3.Connection, data_dir: Path, local: str, visita: s
 
     cl, cv = eq[local]["corners_favor"], eq[visita]["corners_favor"]
     tl, tv = eq[local]["tarjetas_partido"], eq[visita]["tarjetas_partido"]
-    corners_esp = (cl + cv) / 2 if (cl and cv) else None
-    tarjetas_esp = (tl + tv) if (tl and tv) else None
+    wc_l, wc_v = _stats_wc(conn, eq[local]["id"]), _stats_wc(conn, eq[visita]["id"])
+    medias = _medias_torneo(conn)
+
+    prior_corners = (cl + cv) / 2 if (cl and cv) else None
+    obs_corners, n_corners = None, 0.0
+    if wc_l and wc_v:
+        obs_corners = (wc_l["corners_total"] + wc_v["corners_total"]) / 2
+        n_corners = (wc_l["n"] + wc_v["n"]) / 2
+    corners_esp = _mezcla(prior_corners, obs_corners, n_corners)
+
+    tarj_l = _mezcla(tl, wc_l["tarjetas"] if wc_l else None, wc_l["n"] if wc_l else 0.0)
+    tarj_v = _mezcla(tv, wc_v["tarjetas"] if wc_v else None, wc_v["n"] if wc_v else 0.0)
+    tarjetas_esp = (tarj_l + tarj_v) if (tarj_l and tarj_v) else None
+
+    saques_l = saques_v = None
+    if medias:
+        base_saques = medias["saques_equipo"]
+        saques_l = _mezcla(base_saques, wc_l["saques"] if wc_l else None, wc_l["n"] if wc_l else 0.0)
+        saques_v = _mezcla(base_saques, wc_v["saques"] if wc_v else None, wc_v["n"] if wc_v else 0.0)
 
     return Analisis(
         local, visita, eq[local]["nombre"], eq[visita]["nombre"], metodo, lh, la,
         prob, modelo, novig, trabajo, cuotas, fiable, divergencia, matriz, corners_esp, tarjetas_esp,
         dict(eq[local]), dict(eq[visita]),
+        rho=par.rho,
+        saques_local=saques_l,
+        saques_visita=saques_v,
+        tarjetas_ratio_var=medias["tarjetas_ratio_var"] if medias else 1.0,
+        n_wc=int(min(wc_l["n"] if wc_l else 0, wc_v["n"] if wc_v else 0)),
     )
 
 
@@ -184,15 +252,20 @@ def formato_consola(a: Analisis, ctx: dict | None, confianza: str) -> str:
     out.append(f"    Over 2.5: {a.prob['over25'] * 100:.0f}%    Under 2.5: {a.prob['under25'] * 100:.0f}%")
     out.append(f"    Ambos anotan:  Sí {a.prob['btts_si'] * 100:.0f}%    No {a.prob['btts_no'] * 100:.0f}%")
 
-    if a.corners_esp or a.tarjetas_esp:
+    if a.corners_esp or a.tarjetas_esp or a.saques_local:
         out.append("")
-        out.append("  CÓRNERS Y TARJETAS")
+        out.append("  CÓRNERS, TARJETAS Y SAQUES DE META")
         if a.corners_esp:
             o = over_under(a.corners_esp, [8.5, 9.5, 10.5])
             out.append(f"    Córners esperados: {a.corners_esp:.1f}   (" + "  ".join(f"O{l}: {p * 100:.0f}%" for l, p in o.items()) + ")")
         if a.tarjetas_esp:
-            o = over_under(a.tarjetas_esp, [2.5, 3.5, 4.5])
+            o = over_under_nb(a.tarjetas_esp, a.tarjetas_ratio_var, [2.5, 3.5, 4.5])
             out.append(f"    Tarjetas esperadas: {a.tarjetas_esp:.1f}   (" + "  ".join(f"O{l}: {p * 100:.0f}%" for l, p in o.items()) + ")")
+        if a.saques_local and a.saques_visita:
+            tot = a.saques_local + a.saques_visita
+            o = over_under(tot, [13.5, 15.5, 17.5])
+            out.append(f"    Saques de meta esperados: {tot:.1f}  ({cl} {a.saques_local:.1f} - {a.saques_visita:.1f} {cv})")
+            out.append("      (" + "  ".join(f"O{l}: {p * 100:.0f}%" for l, p in o.items()) + ")")
 
     out.append("")
     out.append(f"  CONFIANZA: {confianza}")
@@ -200,7 +273,7 @@ def formato_consola(a: Analisis, ctx: dict | None, confianza: str) -> str:
         out.append(f"  [!] El modelo difiere {a.divergencia * 100:.0f}pp del mercado: NO fiable, no apostar por esta diferencia.")
     out.append("-" * anc)
     out.append("  Leyenda: EV = valor (+ conviene, - no, n/f = no fiable).")
-    out.append("  Over 9.5 = 10 o más.  Glosario completo: opción 10 del menú.")
+    out.append("  Over 9.5 = 10 o más.  Glosario completo: opción 9 del menú.")
     out.append("=" * anc)
     return "\n".join(out)
 
@@ -285,14 +358,22 @@ def generar_markdown(a: Analisis, ctx: dict | None, confianza: str) -> str:
     out.append(f"- Over 2.5: {a.prob['over25'] * 100:.1f}% · Under 2.5: {a.prob['under25'] * 100:.1f}%")
     out.append(f"- Ambos anotan: Sí {a.prob['btts_si'] * 100:.1f}% · No {a.prob['btts_no'] * 100:.1f}%")
 
-    if a.corners_esp or a.tarjetas_esp:
-        out.append("\n## Mercados secundarios (Footystats)\n")
+    if a.corners_esp or a.tarjetas_esp or a.saques_local:
+        fuente_sec = "Footystats + partidos reales del Mundial" if a.n_wc else "Footystats"
+        out.append(f"\n## Mercados secundarios ({fuente_sec})\n")
         if a.corners_esp:
             ou = over_under(a.corners_esp, [8.5, 9.5, 10.5, 11.5])
             out.append(f"- Córners esperados: **{a.corners_esp:.1f}** · " + " · ".join(f"O{l} {p * 100:.0f}%" for l, p in ou.items()))
         if a.tarjetas_esp:
-            ou = over_under(a.tarjetas_esp, [2.5, 3.5, 4.5, 5.5])
+            ou = over_under_nb(a.tarjetas_esp, a.tarjetas_ratio_var, [2.5, 3.5, 4.5, 5.5])
             out.append(f"- Tarjetas esperadas: **{a.tarjetas_esp:.1f}** · " + " · ".join(f"O{l} {p * 100:.0f}%" for l, p in ou.items()))
+        if a.saques_local and a.saques_visita:
+            tot = a.saques_local + a.saques_visita
+            ou = over_under(tot, [13.5, 15.5, 17.5])
+            out.append(
+                f"- Saques de meta esperados: **{tot:.1f}** ({a.nombre_local} {a.saques_local:.1f} · {a.nombre_visita} {a.saques_visita:.1f}) · "
+                + " · ".join(f"O{l} {p * 100:.0f}%" for l, p in ou.items())
+            )
 
     out.append(f"\n**Confianza del análisis:** {confianza}")
     if a.novig and not a.fiable:

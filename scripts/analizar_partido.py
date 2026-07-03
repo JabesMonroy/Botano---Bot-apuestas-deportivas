@@ -32,6 +32,8 @@ def main(local: str, visita: str) -> int:
     print(f"  BTTS Si   {a.prob['btts_si'] * 100:5.1f}%   |  BTTS No    {a.prob['btts_no'] * 100:5.1f}%")
     if a.corners_esp:
         print(f"  Corners esp. {a.corners_esp:.1f}   |  Tarjetas esp. {a.tarjetas_esp:.1f}" if a.tarjetas_esp else f"  Corners esp. {a.corners_esp:.1f}")
+    if a.saques_local and a.saques_visita:
+        print(f"  Saques de meta esp. {a.saques_local + a.saques_visita:.1f}  ({a.local} {a.saques_local:.1f} - {a.saques_visita:.1f} {a.visita})")
     if a.novig and not a.fiable:
         print(f"\n  AVISO: el modelo diverge {a.divergencia * 100:.0f}pp del mercado sharp -> EV no valido")
     return 0

@@ -11,10 +11,13 @@ from src.config import load_config
 from src.db.database import connect
 from src.modelo.bet_builder import prob_conjunta, prob_marginal
 from src.modelo.dixon_coles import Ajustes
-from src.modelo.secundarios import over_under
+from src.modelo.secundarios import over_under, over_under_nb
 from src.modelo.valor import ev
 from src.plantillas import detectar_ausencias, multiplicadores
 from src.reporte import analizar_1x2, contexto_partido, narrativa, nivel_confianza
+from scripts.predecir_ko import FASES as FASES_KO
+from scripts.predecir_ko import TITULO as TITULO_KO
+from scripts.predecir_ko import clasifica, cruces as cruces_ko
 
 st.set_page_config(page_title="Botano · Mundial 2026", page_icon="⚽", layout="wide", initial_sidebar_state="auto")
 
@@ -84,6 +87,8 @@ MERCADOS_COMBI = {
     "Primer gol: local": ("pg", "l"),
     "Primer gol: visita": ("pg", "v"),
     "Primer gol: ninguno (0-0)": ("pg", "n"),
+    "Más de 5.5 córners": ("c", 5.5, "o"),
+    "Menos de 5.5 córners": ("c", 5.5, "u"),
     "Más de 6.5 córners": ("c", 6.5, "o"),
     "Más de 7.5 córners": ("c", 7.5, "o"),
     "Menos de 7.5 córners": ("c", 7.5, "u"),
@@ -102,6 +107,12 @@ MERCADOS_COMBI = {
     "Más de 4.5 tarjetas": ("t", 4.5, "o"),
     "Menos de 4.5 tarjetas": ("t", 4.5, "u"),
     "Menos de 5.5 tarjetas": ("t", 5.5, "u"),
+    "Más de 13.5 saques de meta": ("s", 13.5, "o"),
+    "Menos de 13.5 saques de meta": ("s", 13.5, "u"),
+    "Más de 15.5 saques de meta": ("s", 15.5, "o"),
+    "Menos de 15.5 saques de meta": ("s", 15.5, "u"),
+    "Más de 17.5 saques de meta": ("s", 17.5, "o"),
+    "Menos de 17.5 saques de meta": ("s", 17.5, "u"),
 }
 
 
@@ -117,7 +128,10 @@ def _prob_partido_combi(a, mercados):
             ov = over_under(a.corners_esp, [m[1]])[m[1]]
             extra *= ov if m[2] == "o" else (1 - ov)
         elif m[0] == "t" and a.tarjetas_esp:
-            ov = over_under(a.tarjetas_esp, [m[1]])[m[1]]
+            ov = over_under_nb(a.tarjetas_esp, a.tarjetas_ratio_var, [m[1]])[m[1]]
+            extra *= ov if m[2] == "o" else (1 - ov)
+        elif m[0] == "s" and a.saques_local and a.saques_visita:
+            ov = over_under(a.saques_local + a.saques_visita, [m[1]])[m[1]]
             extra *= ov if m[2] == "o" else (1 - ov)
         elif m[0] == "pg":
             pl, pv, sin = _primer_gol(a.lh, a.la, float(a.matriz[0, 0]))
@@ -132,7 +146,10 @@ def _prob_individual(a, spec):
         ov = over_under(a.corners_esp, [spec[1]])[spec[1]]
         return ov if spec[2] == "o" else 1 - ov
     if spec[0] == "t" and a.tarjetas_esp:
-        ov = over_under(a.tarjetas_esp, [spec[1]])[spec[1]]
+        ov = over_under_nb(a.tarjetas_esp, a.tarjetas_ratio_var, [spec[1]])[spec[1]]
+        return ov if spec[2] == "o" else 1 - ov
+    if spec[0] == "s" and a.saques_local and a.saques_visita:
+        ov = over_under(a.saques_local + a.saques_visita, [spec[1]])[spec[1]]
         return ov if spec[2] == "o" else 1 - ov
     if spec[0] == "pg":
         pl, pv, sin = _primer_gol(a.lh, a.la, float(a.matriz[0, 0]))
@@ -156,6 +173,7 @@ FAMILIAS_PARLEY = {
     "Primer gol": ["Primer gol: local", "Primer gol: visita"],
     "Córners": [k for k in MERCADOS_COMBI if "córners" in k],
     "Tarjetas": [k for k in MERCADOS_COMBI if "tarjetas" in k],
+    "Saques de meta": [k for k in MERCADOS_COMBI if "saques" in k],
 }
 
 
@@ -481,6 +499,23 @@ def mostrar_analisis(a, ctx) -> None:
     d3.metric(f"{a.nombre_local} o {a.nombre_visita}", _pct(a.modelo["1"] + a.modelo["2"]))
     st.caption("Sale de la **misma matriz Dixon-Coles** del modelo (no es una media): se suman las probabilidades de los dos resultados que cubre cada apuesta.")
 
+    if ctx and ctx.get("fase") and ctx["fase"] != "GROUP_STAGE":
+        av1, av2 = clasifica(a)
+        favn, favp = (a.nombre_local, av1) if av1 >= av2 else (a.nombre_visita, av2)
+        st.markdown("**Clasificación a la siguiente ronda** (incluye prórroga y penales)")
+        q1, q2, q3 = st.columns(3)
+        q1.metric(f"Clasifica {a.nombre_local}", _pct(av1))
+        q2.metric(f"Clasifica {a.nombre_visita}", _pct(av2))
+        q3.metric("Va a prórroga (empate 90')", _pct(a.modelo["X"]))
+        st.caption(
+            f"Es eliminación directa: no hay empate final. **{favn} avanza con {_pct(favp)}** (cuota justa {1 / favp:.2f}). "
+            "Si hay empate a los 90', se juega la **prórroga con el mismo modelo a ritmo de 30 minutos** (λ÷3) y, "
+            "si persiste el empate, los **penales se tratan como moneda al aire (50/50)** — así no se sobrevalora al favorito. "
+            "Esto es el mercado **'Para avanzar/Clasificación'** de Betano (cuenta prórroga y penales), **no** el 1X2, "
+            "que se liquida a los 90 minutos: si el partido acaba empatado en los 90', el 1X2 paga el empate aunque luego "
+            "tu equipo quede fuera en penales."
+        )
+
     st.markdown("####  Interpretación")
     st.markdown(narrativa(a))
 
@@ -492,19 +527,28 @@ def mostrar_analisis(a, ctx) -> None:
     g3.metric("Ambos anotan", _pct(a.prob["btts_si"]))
     st.caption("Calculado por el **modelo Dixon-Coles** del bot (no es un dato de fuente externa): estima los goles de cada equipo y de ahí la probabilidad de cada marcador.")
 
-    if a.corners_esp or a.tarjetas_esp:
-        st.markdown("####  Córners y tarjetas")
-        s1, s2 = st.columns(2)
+    if a.corners_esp or a.tarjetas_esp or a.saques_local:
+        st.markdown("####  Córners, tarjetas y saques de meta")
+        s1, s2, s3 = st.columns(3)
         if a.corners_esp:
-            o = over_under(a.corners_esp, [8.5, 9.5, 10.5])
+            o = over_under(a.corners_esp, [5.5, 8.5, 9.5, 10.5])
             s1.metric("Córners esperados", f"{a.corners_esp:.1f}")
             s1.caption(" · ".join(f"+{l}: {_pct(p)}" for l, p in o.items()))
         if a.tarjetas_esp:
-            o = over_under(tarjetas_final, [2.5, 3.5, 4.5])
+            o = over_under_nb(tarjetas_final, a.tarjetas_ratio_var, [2.5, 3.5, 4.5])
             s2.metric("Tarjetas esperadas", f"{tarjetas_final:.1f}", "ajustado por el árbitro" if arb_stats else None)
             s2.caption(" · ".join(f"+{l}: {_pct(p)}" for l, p in o.items()))
+        if a.saques_local and a.saques_visita:
+            tot_sm = a.saques_local + a.saques_visita
+            o = over_under(tot_sm, [13.5, 15.5, 17.5])
+            s3.metric("Saques de meta esperados", f"{tot_sm:.1f}")
+            s3.caption(" · ".join(f"+{l}: {_pct(p)}" for l, p in o.items()))
         nota_arb = ", combinados con la **severidad del árbitro** (Transfermarkt)" if arb_stats else ""
-        st.caption(f"Córners y tarjetas: modelo **Poisson** sobre los promedios de cada selección (Footystats){nota_arb}. '+9.5' = 10 o más.")
+        nota_wc = f" y con lo **observado en este Mundial** (eventos de wc2026-events/WhoScored, {a.n_wc} partidos por equipo)" if a.n_wc else ""
+        st.caption(
+            f"Córners y saques de meta: **Poisson** sobre promedios de cada selección (Footystats){nota_wc}. "
+            f"Tarjetas: **binomial negativa** (recoge que unos partidos se calientan y otros no){nota_arb}. '+9.5' = 10 o más."
+        )
 
     st.markdown("####  Tiros (estimación a partir del xG)")
     k, ratio_arco = params_tiros()
@@ -548,11 +592,32 @@ def mostrar_analisis(a, ctx) -> None:
             col_c.dataframe(pd.DataFrame(filas_ce), hide_index=True, use_container_width=True)
             col_c.caption(f"El **reparto** sí depende del dominio (corr 0.49 en datos de StatsBomb): {a.nombre_local} {cl_esp:.1f} vs {cv_esp:.1f} {a.nombre_visita}. El **total** es más ruidoso, por eso se mantiene en el promedio.")
     if a.tarjetas_esp:
-        ot = over_under(tarjetas_final, [0.5, 1.5, 2.5, 3.5, 4.5, 5.5])
+        ot = over_under_nb(tarjetas_final, a.tarjetas_ratio_var, [0.5, 1.5, 2.5, 3.5, 4.5, 5.5])
         col_t.markdown("**Tarjetas totales**")
         col_t.table(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in ot.items()]))
         razon = f"árbitro **{ctx['arbitro']}** ({arb_stats['amarillas_pp']:.1f}/partido)" if (arb_stats and ctx) else "la intensidad del partido"
         col_t.caption(f"Debido a **{tarjetas_final:.1f} tarjetas** esperadas, influidas por {razon}.")
+
+    if a.saques_local and a.saques_visita:
+        st.markdown("####  Saques de meta (más de / menos de)")
+        sm1, sm2 = st.columns(2)
+        tot_sm = a.saques_local + a.saques_visita
+        osm = over_under(tot_sm, [12.5, 13.5, 14.5, 15.5, 16.5, 17.5, 18.5])
+        sm1.markdown("**Totales del partido**")
+        sm1.dataframe(pd.DataFrame([{"Línea": l, "Más de": _pct(p), "Menos de": _pct(1 - p)} for l, p in osm.items()]), hide_index=True, use_container_width=True)
+        sm2.markdown("**Por equipo**")
+        filas_sm = []
+        for nombre, esp in ((a.nombre_local, a.saques_local), (a.nombre_visita, a.saques_visita)):
+            oeq = over_under(esp, [5.5, 6.5, 7.5, 8.5])
+            fila = {"Equipo": nombre, "Esperados": f"{esp:.1f}"}
+            fila.update({f"+{l}": _pct(p) for l, p in oeq.items()})
+            filas_sm.append(fila)
+        sm2.dataframe(pd.DataFrame(filas_sm), hide_index=True, use_container_width=True)
+        sm2.caption(
+            "Saque de meta: el balón sale por la línea de fondo tocado por el rival, sin gol ni córner. "
+            "Un equipo que **recibe muchos tiros desviados** o despeja mucho tiende a más saques de meta. "
+            "Promedios **reales de este Mundial** (wc2026-events), encogidos a la media del torneo según los partidos jugados."
+        )
 
     st.markdown("####  Goles por equipo y primer gol")
     eq1, eq2, eq3 = st.columns(3)
@@ -602,16 +667,18 @@ def mostrar_analisis(a, ctx) -> None:
 **Fuentes de los datos**
 - **Elo** de selecciones → eloratings.net
 - **Valor de plantilla** → Transfermarkt
-- **xG/xGA, córners, tarjetas** → Footystats
+- **xG/xGA, córners, tarjetas** (previas al Mundial) → Footystats
+- **Eventos reales del Mundial 2026** (tiros con xG propio, córners, tarjetas, saques de meta) → wc2026-events (WhoScored)
 - **Cuotas y mercado** (Pinnacle) → The Odds API
 - **Resultados y tabla del grupo** → football-data.org
 - **Histórico de selección 2022-24** (para entrenar el modelo) → API-Football
 
 **Modelos estadísticos**
-- **Goles → Dixon-Coles** (Poisson bivariado con corrección de marcadores bajos): estima los goles esperados de cada equipo (λ) y construye la probabilidad de cada marcador. De esa matriz salen 1X2, Over/Under y Ambos anotan, todos coherentes entre sí.
-- **Fuerza de cada selección**: estimada de ~1.700 partidos (2022-24) con **ponderación temporal** (pesan más los recientes), **anclada al Elo** (compara entre confederaciones) y ajustada por el **valor de plantilla** (calibrado contra el mercado).
-- **Mercado y valor**: la columna *Mercado* quita el margen de la casa a la cuota de Pinnacle (*no-vig*); *Apostar* mezcla modelo y mercado (*shrinkage*); el **EV** compara esa probabilidad con la cuota. Un **guardarraíl** marca "n/f" cuando el modelo se aleja demasiado del mercado.
-- **Córners y tarjetas → Poisson** sobre los promedios de cada selección.
+- **Goles → Dixon-Coles** (Poisson bivariado con corrección de marcadores bajos): estima los goles esperados de cada equipo (λ) y construye la probabilidad de cada marcador. De esa matriz salen 1X2, Over/Under y Ambos anotan, todos coherentes entre sí (incluida la corrección de empate, aplicada a la matriz entera).
+- **Fuerza de cada selección**: estimada de ~1.900 partidos (2022-26) con **ponderación temporal**, **anclada al Elo** y ajustada por el **valor de plantilla** (calibrado contra el mercado). Los partidos del Mundial entran con una **mezcla de xG y goles** (el xG tiene menos ruido con pocos partidos) y sin ventaja de local salvo los anfitriones. Un ajuste de nivel de torneo (*mu_torneo*) corrige que este Mundial va con más goles que el histórico.
+- **Mercado y valor**: la columna *Mercado* quita el margen de la casa a la cuota de Pinnacle con el método *power* (corrige el sesgo favorito-longshot); *Apostar* mezcla modelo y mercado (*shrinkage*, más peso al mercado en partidos reñidos); el **EV** compara esa probabilidad con la cuota. Un **guardarraíl** marca "n/f" cuando el modelo se aleja demasiado del mercado.
+- **Eliminatorias**: si hay empate a los 90' se modela la **prórroga** (mismo modelo a λ÷3) y los **penales al 50/50**.
+- **Córners y saques de meta → Poisson**; **tarjetas → binomial negativa** (sobredispersión); promedios de Footystats mezclados con lo observado en este Mundial.
             """
         )
 
@@ -697,7 +764,11 @@ def mercado_totales():
 
 st.sidebar.title("⚽ Botano")
 st.sidebar.caption("Mundial 2026")
-pagina = st.sidebar.radio("Menú", ["Analizar partido", "Analizar apuesta", "Armar Bet Builder", "Ranking de valor", "Fiabilidad del modelo", "Glosario"])
+pagina = st.sidebar.radio("Menú", ["Analizar partido", "Analizar apuesta", "Clasificación (eliminatorias)", "Armar Bet Builder", "Ranking de valor", "Fiabilidad del modelo", "Glosario"])
+if st.sidebar.button("🔄 Refrescar datos"):
+    st.cache_data.clear()
+    st.rerun()
+st.sidebar.caption("Pulsa 🔄 tras actualizar la base para ver los partidos y resultados más recientes.")
 st.sidebar.caption("Herramienta de análisis, no garantía de ganancia.")
 
 
@@ -987,6 +1058,43 @@ elif pagina == "Analizar apuesta":
                 if cuota_m and cuota_m > 1:
                     m2.metric("Valor (EV)", f"{ev(p_corr, cuota_m):+.3f}" if fiable else "n/f")
                     st.caption(f"Cuota justa según el modelo: **{1 / p_corr:.2f}**. " + ("Tiene valor solo si tu cuota la supera." if fiable else "Algún partido es poco fiable vs el mercado (EV no válido)."))
+
+elif pagina == "Clasificación (eliminatorias)":
+    st.title("Predictor de clasificación — eliminatorias")
+    st.caption("Probabilidad de que cada equipo **avance a la siguiente ronda** (incluye prórroga y penales). "
+               "Corresponde al mercado **'Para avanzar / Clasificación'** de Betano, no al 1X2 (que se liquida a los 90'). "
+               "Aplica la ventaja de localía de los anfitriones (México, EE. UU., Canadá). Se actualiza solo cuando football-data.org publica cada cruce.")
+    conn = connect(CFG.db_path)
+    hubo = False
+    for f in FASES_KO:
+        filas_ko = cruces_ko(conn, f)
+        if not filas_ko:
+            continue
+        hubo = True
+        st.markdown(f"#### {TITULO_KO.get(f, f)}")
+        tabla = []
+        for r in filas_ko:
+            a = analizar_1x2(conn, CFG.data_dir, r["fh"], r["fv"])
+            if a is None:
+                continue
+            p1, px, p2 = a.modelo["1"], a.modelo["X"], a.modelo["2"]
+            av1, av2 = clasifica(p1, px, p2)
+            favn, favp = (a.nombre_local, av1) if av1 >= av2 else (a.nombre_visita, av2)
+            tabla.append({
+                "Cruce": f"{a.nombre_local} vs {a.nombre_visita}",
+                "1 (90')": _pct(p1), "X": _pct(px), "2 (90')": _pct(p2),
+                "→ prórroga": _pct(px),
+                "Clasifica": favn, "Prob.": _pct(favp),
+                "Cuota justa": f"{1 / favp:.2f}" if favp > 0 else "—",
+            })
+        if tabla:
+            st.dataframe(pd.DataFrame(tabla), hide_index=True, use_container_width=True)
+    conn.close()
+    if not hubo:
+        st.info("Aún no hay cruces de eliminación directa cargados. Corre `python -m scripts.actualizar` y pulsa 🔄 Refrescar datos.")
+    else:
+        st.caption("**Cuota justa** = 1 ÷ probabilidad (sin margen): hay valor si Betano paga más que eso en 'Para avanzar'. "
+                   "⚠ En cruces parejos el modelo arrastra su sesgo (sobrevalora a selecciones de CAF, puede infravalorar a los favoritos por plantilla): trátalos con cautela y contrasta con la cuota del mercado.")
 
 elif pagina == "Armar Bet Builder":
     st.title("Armar Bet Builder (Boost)")
