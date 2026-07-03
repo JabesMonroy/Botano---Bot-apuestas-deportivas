@@ -182,10 +182,10 @@ Insumos cuantitativos:
 - Calcular la **probabilidad conjunta real** simulando sobre la matriz de marcadores / **Monte Carlo** del partido, no multiplicando.
 - Marcar correlaciones típicas: Over 2.5 + BTTS (positiva), equipo gana + Under (a menudo negativa), gana favorito + ambos anotan (depende). Indicar si Betano ya descuenta la correlación en la cuota combinada.
 
-### 3.5 Mercados de torneo (futuros) — implementado
+### 3.5 Mercados de torneo (futuros) — eliminado (julio 2026)
 
-- **Simulación Monte Carlo** del cuadro completo (grupos con desempates → eliminatorias) para `P(avanza)`, `P(final)` y `P(campeón)`. El cuadro de eliminatorias se modela como **sorteo aleatorio** entre los 32 (aproximación documentada; la asignación oficial de los 8 mejores terceros queda pendiente).
-- **Hallazgo (sesgo amplificado)**: `P(avanza)` es robusta, pero `P(campeón)` del modelo crudo **amplifica los sesgos** (no capta calidad de plantilla): sobrevalora a CONMEBOL (COL +21pp, ARG +15pp vs mercado) e **infravalora a Francia** (−16pp). Para outrights, **deferir al mercado**; las grandes divergencias son fallos del modelo, no valor (mismo principio que el guardarraíl de partido).
+- La **simulación Monte Carlo** del cuadro se retiró del código: `P(campeón)` del modelo crudo **amplificaba los sesgos** (sobrevaloraba a CONMEBOL, infravaloraba a Francia) y, con el cuadro real ya definido, el mercado outright es mejor estimador. Para outrights, **deferir al mercado** — las grandes divergencias son fallos del modelo, no valor.
+- Lo que sí se mantiene para eliminatorias es **`predecir_ko`**: por cruce real, 1X2 a 90' y `P(clasifica)` modelando la prórroga (misma matriz Dixon-Coles a λ/3) y los penales al 50/50 (mercado "para avanzar" de Betano).
 
 ### 3.6 Modelado de mercados secundarios (córners y tarjetas)
 

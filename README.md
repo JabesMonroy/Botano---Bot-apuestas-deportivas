@@ -3,7 +3,7 @@
 Agente analista cuantitativo para el Mundial 2026. Plan y razonamiento en
 [prompt_maestro_agente_mundial2026.md](prompt_maestro_agente_mundial2026.md); reglas de trabajo en [CLAUDE.md](CLAUDE.md).
 
-Pipeline: **5 fuentes de datos → mapeo de 48 selecciones → modelo de goles Dixon-Coles (fuerzas + Elo) → evaluación anti-sesgo → reporte / bet builder / simulación de torneo → CLV**.
+Pipeline: **6 fuentes de datos → mapeo de 48 selecciones → modelo de goles Dixon-Coles (fuerzas + Elo + xG del Mundial) → evaluación anti-sesgo → reporte / bet builder / eliminatorias → CLV**.
 
 ## Arquitectura de fuentes
 
@@ -14,7 +14,8 @@ Pipeline: **5 fuentes de datos → mapeo de 48 selecciones → modelo de goles D
 | Elo de selecciones | eloratings.net |
 | Histórico 2022-24 (calibración) | API-Football (free) |
 | Valor de plantilla / bajas | Transfermarkt |
-| Córners, tarjetas, xG | Footystats |
+| Córners, tarjetas, xG (previos) | Footystats |
+| Eventos del Mundial 2026 (xG por tiro, córners, tarjetas, saques de meta) | wc2026-events (WhoScored) |
 | Clima | OpenWeatherMap |
 
 > API-Football free **no cubre 2026** (solo histórico). Sofascore y FBref están bloqueados por anti-bot (no se evaden).
@@ -26,20 +27,20 @@ src/
   config.py            .env y rutas
   db/                  esquema SQLite + conexión
   clients/             API-Football, The Odds API, football-data, OpenWeather (cache + rate limit)
-  scrapers/            eloratings.net
+  scrapers/            eloratings.net, Transfermarkt, Footystats, wc2026-events
   mapeo.py             tabla maestra de 48 selecciones (clave FIFA)
   ingesta.py           partidos, resultados, standings, cuotas del Mundial
   historico.py         partidos de selección 2022-24
   modelo/
-    dixon_coles.py     matriz de marcadores, mercados, Ajustes
-    fuerzas.py         estimación ataque/defensa (MV ponderada en tiempo, anclada al Elo)
+    dixon_coles.py     matriz de marcadores, mercados, corrección de empate, Ajustes
+    fuerzas.py         estimación ataque/defensa (MV ponderada en tiempo, anclada al Elo, xG del Mundial)
+    xg.py              xG por tiro (logístico distancia/ángulo, calibrado con StatsBomb WC22)
     parametros.py      carga/persistencia de parámetros
     calibracion.py     ajuste contra no-vig de Pinnacle
     evaluacion.py      RPS y métricas
-    valor.py           no-vig, EV, Kelly, corrección de empate, shrinkage
+    valor.py           no-vig (power), EV, Kelly, shrinkage
     bet_builder.py     probabilidad conjunta por correlación
-    torneo.py          simulación Monte Carlo
-  reporte.py           análisis 1X2 + markdown
+  reporte.py           análisis 1X2 + secundarios + markdown
   apuestas.py          log, Kelly, CLV
 scripts/               puntos de entrada (ver runbook)
 data/                  bd, caché, referencia/, modelos/, partidos/ (snapshots)
@@ -70,6 +71,8 @@ python -m scripts.calibrar_sesgo      # corrección de empate + shrinkage
 python -m scripts.calibrar_valor      # peso del valor de plantilla (calibrado al mercado)
 python -m scripts.calibrar_xg         # peso del xG de selección (calibrado al mercado)
 python -m scripts.calibrar_tiros      # calibra tiros/xG con el Mundial 2022 (StatsBomb)
+python -m scripts.calibrar_xg_disparo # xG por tiro (logístico, StatsBomb WC22)
+python -m scripts.ingestar_eventos    # eventos reales del Mundial 2026 (wc2026-events)
 ```
 
 ## Uso diario
@@ -79,7 +82,7 @@ python -m scripts.actualizar                  # refresca datos en vivo del Mundi
 python -m scripts.generar_reporte ARG AUT     # reporte pre-partido (guarda en data/partidos/)
 python -m scripts.analizar_partido ESP KSA    # análisis rápido en consola
 python -m scripts.bet_builder ARG-AUT:1 ARG-AUT:under2.5 @2.10   # combinada con correlación
-python -m scripts.simular_torneo 20000        # P(avanza)/P(campeón) vs mercado
+python -m scripts.predecir_ko                  # cruces de eliminación directa (prórroga + penales)
 python -m scripts.bajas ARG                    # detecta ausencias (plantilla TM vs convocados)
 python -m scripts.impacto_bajas FRA ENG "Mbappe" ""   # re-analiza descontando una baja
 python -m scripts.registrar_apuesta ARG AUT 1 1.62 10           # registrar apuesta de Betano
@@ -90,6 +93,6 @@ python -m scripts.clv                          # actualizar cierre/CLV/resultado
 
 - El modelo cuantitativo **no bate al mercado sharp** (Pinnacle); su valor real requiere datos de plantilla/forma (bloqueados). Un **guardarraíl** evita reportar EV cuando el modelo diverge >18pp del mercado.
 - Sesgo de calendario/inter-confederación: el anclaje al Elo lo mitiga pero no lo elimina.
-- `P(campeón)` de la simulación amplifica los sesgos: usar el mercado para outrights.
+- En partidos reñidos el modelo pesa más al mercado (shrinkage reforzado): ahí no tiene ventaja demostrada.
+- La simulación Monte Carlo del torneo se eliminó: para outrights, usar el mercado; para cruces, `predecir_ko`.
 - Herramienta de análisis, no garantía de ganancia.
-```

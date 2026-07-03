@@ -80,13 +80,13 @@ Aparece un menú. Escribe el número de lo que quieras y pulsa Enter:
 | **3. Analizar descontando bajas** | Igual que el 2, pero indicando jugadores lesionados/ausentes para ajustar el pronóstico. |
 | **4. Evaluar una combinada** | Le pasas tu combinada y te dice la probabilidad real (teniendo en cuenta la correlación) y si tiene valor. |
 | **5. Ver bajas de un equipo** | Lista los jugadores valiosos que no están en la convocatoria. |
-| **6. Simular el torneo** | Probabilidad de cada selección de clasificar y de ser campeón, comparada con el mercado. |
-| **7. Registrar una apuesta** | Apuntas una apuesta que hiciste en Betano para hacerle seguimiento. |
-| **8. Ver historial y CLV** | Muestra tus apuestas y si batiste la línea de cierre (la señal de que vas bien). |
-| **9. Ver códigos de equipos** | La lista de códigos de 3 letras (ARG, BRA, FRA...) que se usan al escribir los equipos. |
+| **6. Registrar una apuesta** | Apuntas una apuesta que hiciste en Betano para hacerle seguimiento. |
+| **7. Ver historial y CLV** | Muestra tus apuestas y si batiste la línea de cierre (la señal de que vas bien). |
+| **8. Ver códigos de equipos** | La lista de códigos de 3 letras (ARG, BRA, FRA...) que se usan al escribir los equipos. |
+| **9. Ayuda / glosario** | Qué significa cada término (Elo, xG, EV, Over...). |
 | **0. Salir** | Cierra el programa. |
 
-> Los equipos se escriben con su **código de 3 letras** (opción 9 para verlos). Ejemplo: Argentina = `ARG`, Francia = `FRA`.
+> Los equipos se escriben con su **código de 3 letras** (opción 8 para verlos). Ejemplo: Argentina = `ARG`, Francia = `FRA`.
 
 ---
 
@@ -95,8 +95,8 @@ Aparece un menú. Escribe el número de lo que quieras y pulsa Enter:
 1. `python bot.py`
 2. Opción **1** (actualizar datos).
 3. Opción **2**, escribes `ARG` y `AUT` → lees el reporte.
-4. Si decides apostar en Betano, opción **7** para registrarla.
-5. Días después, opción **8** para ver tu CLV.
+4. Si decides apostar en Betano, opción **6** para registrarla.
+5. Días después, opción **7** para ver tu CLV.
 
 ---
 
@@ -104,5 +104,5 @@ Aparece un menú. Escribe el número de lo que quieras y pulsa Enter:
 
 - **No es una bola de cristal.** Es una herramienta de análisis; el fútbol tiene azar.
 - Si el reporte dice **"EV no válido / el modelo diverge del mercado"**, significa que ahí el modelo no es fiable: no apuestes por esa diferencia.
-- La mejor señal de que el sistema te ayuda no es ganar una semana, sino el **CLV positivo** (opción 8) a lo largo del torneo.
+- La mejor señal de que el sistema te ayuda no es ganar una semana, sino el **CLV positivo** (opción 7) a lo largo del torneo.
 - Para entender cómo funciona por dentro: [documentacion.md](documentacion.md).
