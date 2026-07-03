@@ -527,6 +527,30 @@ def mostrar_analisis(a, ctx) -> None:
     g3.metric("Ambos anotan", _pct(a.prob["btts_si"]))
     st.caption("Calculado por el **modelo Dixon-Coles** del bot (no es un dato de fuente externa): estima los goles de cada equipo y de ahí la probabilidad de cada marcador.")
 
+    if a.goles_mercado or a.btts_mercado:
+        pares = []
+        if a.goles_mercado:
+            g = a.goles_mercado
+            pares += [(f"Más de {g['linea']} goles", g, "over"), (f"Menos de {g['linea']} goles", g, "under")]
+        if a.btts_mercado:
+            pares += [("Ambos anotan: Sí", a.btts_mercado, "si"), ("Ambos anotan: No", a.btts_mercado, "no")]
+        filas_gm = []
+        for etq, g, lado in pares:
+            cu = g["cuotas"][lado]
+            filas_gm.append({
+                "Selección": etq, "Modelo": _pct(g["modelo"][lado]), "Mercado": _pct(g["novig"][lado]),
+                "Apostar": _pct(g["trabajo"][lado]), "Cuota": f"{cu:.2f}",
+                "EV": f"{g['ev'][lado]:+.3f}" if g["fiable"] else "n/f",
+            })
+        st.markdown("**Goles vs mercado (Pinnacle)**")
+        st.dataframe(pd.DataFrame(filas_gm).style.apply(color_ev, subset=["EV"]), hide_index=True, use_container_width=True)
+        st.caption(
+            "Misma lectura que el 1X2: *Mercado* es la cuota de Pinnacle sin margen, *Apostar* mezcla modelo y mercado "
+            "(aquí con **más peso al mercado**, 80%, porque en goles el modelo no ha demostrado ventaja) y el **EV** compara con la cuota. "
+            "En líneas asiáticas de cuarto (p. ej. 2.25) el EV ya descuenta las medias apuestas devueltas. "
+            "**n/f** = divergencia excesiva, no apostar."
+        )
+
     if a.corners_esp or a.tarjetas_esp or a.saques_local:
         st.markdown("####  Córners, tarjetas y saques de meta")
         s1, s2, s3 = st.columns(3)

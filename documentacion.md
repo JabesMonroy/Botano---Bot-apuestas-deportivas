@@ -22,7 +22,7 @@ Principios de diseño:
 
 | Fuente | Acceso | Rol |
 |---|---|---|
-| The Odds API | API key | Cuotas (Pinnacle), calendario, outright del Mundial |
+| The Odds API | API key | Cuotas de Pinnacle (1X2, totals y BTTS), calendario, outright del Mundial |
 | football-data.org | API key | Resultados, standings, plantillas convocadas |
 | eloratings.net | scraping (TSV) | Elo de selecciones (escala global entre confederaciones) |
 | API-Football | API key (free) | Histórico de selección 2022-24 para estimar fuerzas |
@@ -42,7 +42,7 @@ Esquema en [src/db/schema.sql](src/db/schema.sql). Tablas:
 - **partidos**: fixtures del Mundial (local, visita, grupo, fase, estado), enlazados por `football_data_id`.
 - **resultados**: marcadores de los partidos jugados.
 - **standings**: tabla de cada grupo (puntos, dg, gf).
-- **cuotas**: 1X2 de Pinnacle por partido.
+- **cuotas**: cuotas de Pinnacle por partido y mercado: `1X2` (selección = código FIFA o `X`), `totals` (selección = `over2.25`, `under2.5`, ... con la línea embebida) y `btts` (`si`/`no`). Los totals llegan en la misma llamada bulk (2 créditos de cuota); el BTTS requiere una llamada por evento y solo se pide para partidos a ≤4 días (cuota-consciente).
 - **historico**: ~1900 partidos de selección 2022-24 (goles), base para estimar fuerzas.
 - **estadisticas_mundial**: por partido del Mundial y equipo: goles a 90', xG propio, tiros, tiros al arco, córners, tarjetas, saques de meta (fuente wc2026-events).
 - **apuestas**: log de apuestas con cuota, stake, EV, CLV, resultado.
@@ -113,10 +113,11 @@ Todos cachean el HTML/TSV con TTL (24h) y usan User-Agent de navegador. Si una f
 5. **Nivel de goles del torneo** (`mu_torneo`): este Mundial va a ~3.1 goles/partido frente a ~2.7 del histórico; un offset con shrinkage (k=40) sobre los partidos jugados corrige la subestimación del Over sin perseguir la racha (objetivo = mezcla xG/goles, no los goles brutos).
 6. **De λ a mercados**: `matriz_marcadores` genera la matriz de resultados; la **corrección de empate se aplica a la matriz** (deflacta la diagonal y renormaliza), de modo que 1X2, O/U, BTTS, marcadores y bet builder son coherentes entre sí. El delta se ancla a la divergencia con el mercado (tras las demás correcciones quedó en ~0.008).
 7. **Shrinkage** (w=0.65; **w=0.80 en partidos reñidos**, donde el modelo no demostró ventaja): la "línea de trabajo" mezcla modelo y no-vig de Pinnacle (devig **power**); sobre ella se calcula el EV.
-8. **Guardarraíl**: si modelo y mercado divergen >18pp, se marca poco fiable y **no se reporta EV**.
-9. **Eliminatorias**: el 1X2 es a 90'; para el mercado "avanza" se modela la prórroga con la misma matriz a λ/3 y, si persiste el empate, penales al 50/50 (antes se repartía el empate proporcional al favorito, que lo sobrevaloraba).
-10. **Ajustes prospectivos (bajas)**: con input explícito de jugadores ausentes, se reduce el ataque (baja ofensiva) o se aumenta la permisividad defensiva (baja defensiva), ponderado por el valor del jugador.
-11. **Secundarios**: córners y saques de meta con Poisson, tarjetas con binomial negativa (ratio varianza/media del torneo); promedios previos de Footystats mezclados con lo observado en el Mundial (peso n/(n+3) por partidos jugados).
+8. **Ancla de mercado en goles**: la línea principal de totals y el BTTS de Pinnacle se comparan con el modelo con la misma mecánica (no-vig power → shrinkage con w=0.80 fijo → EV → guardarraíl de 18pp). Las **líneas asiáticas** (enteras y de cuarto, p. ej. 2.25) se valoran con su estructura real de pagos (push y medias apuestas), no como binarias.
+9. **Guardarraíl**: si modelo y mercado divergen >18pp, se marca poco fiable y **no se reporta EV**.
+10. **Eliminatorias**: el 1X2 es a 90'; para el mercado "avanza" se modela la prórroga con la misma matriz a λ/3 y, si persiste el empate, penales al 50/50 (antes se repartía el empate proporcional al favorito, que lo sobrevaloraba).
+11. **Ajustes prospectivos (bajas)**: con input explícito de jugadores ausentes, se reduce el ataque (baja ofensiva) o se aumenta la permisividad defensiva (baja defensiva), ponderado por el valor del jugador.
+12. **Secundarios**: córners y saques de meta con Poisson, tarjetas con binomial negativa (ratio varianza/media del torneo); promedios previos de Footystats mezclados con lo observado en el Mundial (peso n/(n+3) por partidos jugados).
 
 ---
 

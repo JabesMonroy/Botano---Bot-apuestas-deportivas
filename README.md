@@ -9,7 +9,7 @@ Pipeline: **6 fuentes de datos → mapeo de 48 selecciones → modelo de goles D
 
 | Rol | Fuente |
 |---|---|
-| Cuotas, calendario, outright | The Odds API (incluye Pinnacle) |
+| Cuotas (1X2, totals, BTTS), calendario, outright | The Odds API (Pinnacle) |
 | Resultados, standings | football-data.org |
 | Elo de selecciones | eloratings.net |
 | Histórico 2022-24 (calibración) | API-Football (free) |

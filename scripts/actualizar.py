@@ -26,7 +26,10 @@ def main() -> int:
         odds.close()
     conn.close()
 
-    print(f"partidos {np_} | resultados {nr} | standings {ns} | cuotas Pinnacle {nc}")
+    print(
+        f"partidos {np_} | resultados {nr} | standings {ns} | "
+        f"cuotas Pinnacle 1X2 {nc['1x2']} · totals {nc['totals']} · btts {nc['btts']}"
+    )
     print("siguiente: scripts.clv (actualizar CLV/resultados) y scripts.generar_reporte LOCAL VISITA")
     return 0
 
