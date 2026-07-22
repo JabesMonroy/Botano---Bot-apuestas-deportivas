@@ -10,7 +10,7 @@ from src.modelo.secundarios import over_under, over_under_nb
 from src.modelo.valor import ev
 from src.reporte import narrativa, nivel_confianza
 from src.ui import mercados_cupon
-from src.ui.datos import params_tiros, tasa_arbitro
+from src.ui.datos import info_equipo, params_tiros, tasa_arbitro
 from src.ui.formato import corners_equipo, dist_goles, estilo_texto, over_equipo, pct, primer_gol
 from src.ui.mercados import parley_sugerido, prob_partido_combi, MERCADOS_COMBI
 
@@ -72,6 +72,18 @@ def _panel_agregar_cupon(cfg: Config, a, tarjetas_final: float | None) -> None:
             )
 
 
+def _chip_equipo(nombre: str, info: dict | None) -> str:
+    color = (info or {}).get("color_principal") or "#888888"
+    escudo = (info or {}).get("escudo_url")
+    img_html = f'<img src="{escudo}" width="28" style="vertical-align:middle;margin-right:6px;border-radius:4px">' if escudo else ""
+    return (
+        '<span style="display:inline-flex;align-items:center;gap:6px;font-size:1.4rem;font-weight:600">'
+        f"{img_html}"
+        f'<span style="width:10px;height:10px;border-radius:50%;background:{color};display:inline-block;flex-shrink:0"></span>'
+        f"{nombre}</span>"
+    )
+
+
 def _color_ev(col):
     estilos = []
     for x in col:
@@ -95,7 +107,11 @@ def mostrar_analisis(cfg: Config, a, ctx: dict | None) -> None:
     club = a.metodo == "clubes"
     etiqueta_grupo = (ctx and ctx.get("liga_nombre")) or (ctx and f"Grupo {ctx['grupo']}") or ""
 
-    st.subheader(f"{a.nombre_local}  vs  {a.nombre_visita}")
+    info_l, info_v = info_equipo(cfg, a.local), info_equipo(cfg, a.visita)
+    st.markdown(
+        f"{_chip_equipo(a.nombre_local, info_l)}&nbsp;&nbsp;vs&nbsp;&nbsp;{_chip_equipo(a.nombre_visita, info_v)}",
+        unsafe_allow_html=True,
+    )
     if ctx:
         fecha = ctx["fecha"][:16].replace("T", " ") if ctx["fecha"] else "?"
         arb = ""

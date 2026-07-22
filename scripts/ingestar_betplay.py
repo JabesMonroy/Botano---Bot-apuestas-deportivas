@@ -53,6 +53,7 @@ def main() -> int:
 
     af = ApiFootball(cfg.api_football_key, cfg.api_football_host, cfg.cache_dir / "api_football")
     equipos: dict[int, str] = {}
+    logos: dict[int, str | None] = {}
     filas_totales = []
     for temporada in TEMPORADAS:
         data = af.fixtures(league=liga.api_football_id, season=temporada)
@@ -64,6 +65,8 @@ def main() -> int:
             home, away = fx["teams"]["home"], fx["teams"]["away"]
             equipos[home["id"]] = home["name"]
             equipos[away["id"]] = away["name"]
+            logos[home["id"]] = home.get("logo")
+            logos[away["id"]] = away.get("logo")
             gh, ga = fx["goals"]["home"], fx["goals"]["away"]
             if gh is None or ga is None:
                 continue
@@ -76,10 +79,12 @@ def main() -> int:
         base = _norm(nombre).split()[0][:3].upper() or "EQU"
         codigo = _codigo_unico(conn, base, api_id)
         conn.execute(
-            "INSERT INTO equipos (fifa_code, nombre, api_football_id, liga_id, odds_api_name, actualizado) "
-            "VALUES (?, ?, ?, ?, '', datetime('now')) "
-            "ON CONFLICT(api_football_id) DO UPDATE SET nombre=excluded.nombre, liga_id=COALESCE(equipos.liga_id, excluded.liga_id)",
-            (codigo, nombre, api_id, cod_liga),
+            "INSERT INTO equipos (fifa_code, nombre, api_football_id, liga_id, odds_api_name, escudo_url, actualizado) "
+            "VALUES (?, ?, ?, ?, '', ?, datetime('now')) "
+            "ON CONFLICT(api_football_id) DO UPDATE SET nombre=excluded.nombre, "
+            "liga_id=COALESCE(equipos.liga_id, excluded.liga_id), "
+            "escudo_url=COALESCE(equipos.escudo_url, excluded.escudo_url)",
+            (codigo, nombre, api_id, cod_liga, logos.get(api_id)),
         )
         equipo_id = conn.execute("SELECT id FROM equipos WHERE api_football_id=?", (api_id,)).fetchone()["id"]
         conn.execute("INSERT OR IGNORE INTO equipos_competicion (equipo_id, liga_id) VALUES (?, ?)", (equipo_id, cod_liga))

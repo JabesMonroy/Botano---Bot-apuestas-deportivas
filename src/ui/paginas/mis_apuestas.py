@@ -113,7 +113,8 @@ def render(cfg: Config) -> None:
         pendientes_sencillas = [s for s in sencillas if s["resultado"] is None]
         pendientes_patas = [p for c in combinadas for p in c["patas"] if p["resultado"] is None]
         if pendientes_sencillas or pendientes_patas:
-            st.markdown(f"**{len(pendientes_sencillas) + len(pendientes_patas)} pendiente(s)** — márcalas si ya sabes el resultado")
+            st.markdown(f"**{len(pendientes_sencillas) + len(pendientes_patas)} línea(s) por marcar** — márcalas si ya sabes el resultado")
+            st.caption("Cuenta cada selección por separado, incluidas las patas de combinadas; el «Pendientes» de arriba cuenta apuestas y combinadas como una sola unidad cada una.")
             for s in pendientes_sencillas:
                 c1, c2, c3 = st.columns([4, 1, 1])
                 etq = _ETIQUETA_MERCADO.get(s["mercado"], s["mercado"])

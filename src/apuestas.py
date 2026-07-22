@@ -82,17 +82,17 @@ def historial(conn: sqlite3.Connection) -> list[dict]:
 
 def historial_combinadas(conn: sqlite3.Connection) -> list[dict]:
     combis = conn.execute("SELECT * FROM combinadas ORDER BY fecha DESC").fetchall()
-    resultado = []
-    for c in combis:
-        patas = conn.execute(
-            "SELECT a.id, a.mercado, a.seleccion, a.prob_modelo, a.cuota_betano, a.resultado, "
-            "el.nombre nl, ev2.nombre nv FROM apuestas a JOIN partidos p ON a.partido_id=p.id "
-            "JOIN equipos el ON p.equipo_local_id=el.id JOIN equipos ev2 ON p.equipo_visita_id=ev2.id "
-            "WHERE a.combinada_id=?",
-            (c["id"],),
-        ).fetchall()
-        resultado.append({**dict(c), "patas": [dict(p) for p in patas]})
-    return resultado
+    if not combis:
+        return []
+    patas_por_combinada: dict[int, list[dict]] = {c["id"]: [] for c in combis}
+    for p in conn.execute(
+        "SELECT a.id, a.combinada_id, a.mercado, a.seleccion, a.prob_modelo, a.cuota_betano, a.resultado, "
+        "el.nombre nl, ev2.nombre nv FROM apuestas a JOIN partidos p ON a.partido_id=p.id "
+        "JOIN equipos el ON p.equipo_local_id=el.id JOIN equipos ev2 ON p.equipo_visita_id=ev2.id "
+        "WHERE a.combinada_id IN (SELECT id FROM combinadas)"
+    ):
+        patas_por_combinada.setdefault(p["combinada_id"], []).append(dict(p))
+    return [{**dict(c), "patas": patas_por_combinada[c["id"]]} for c in combis]
 
 
 def marcar_resultado(conn: sqlite3.Connection, apuesta_id: int, gano: bool) -> None:

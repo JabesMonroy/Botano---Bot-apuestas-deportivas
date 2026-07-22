@@ -237,7 +237,7 @@ def render(cfg: Config) -> None:
     ligas_ordenadas = sorted(ligas, key=lambda l: proximo.get(l["id"], {}).get("dias", 9999))
 
     st.title("Analizar apuesta")
-    liga = selector_liga.selector_competicion(cfg, ligas_ordenadas, proximo, key="apu_liga")
+    liga = selector_liga.selector_competicion(cfg, ligas_ordenadas, proximo, key="liga_global")
     st.caption("Lee tu apuesta desde una captura de Betano (recomendado) o ármala a mano. Todas las selecciones deben ser de **esta competición**. "
                "Dentro de un mismo partido se usa la correlación real (matriz Dixon-Coles para goles); córners y tarjetas se tratan como independientes.")
 

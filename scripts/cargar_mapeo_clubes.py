@@ -15,6 +15,7 @@ from src.clients.football_data import FootballData
 from src.clients.odds_api import OddsApi
 from src.config import load_config
 from src.db.database import connect
+from src.imagenes import color_dominante
 from src.ligas import LIGAS, registrar as registrar_ligas
 
 UMBRAL_MATCH = 0.62
@@ -114,18 +115,36 @@ def _mapear_liga(conn: sqlite3.Connection, fd: FootballData, odds: OddsApi, liga
     for t in equipos.values():
         codigo = _codigo_unico(conn, t.get("tla") or f"E{t['id']}", t["id"])
         conn.execute(
-            "INSERT INTO equipos (fifa_code, nombre, football_data_id, football_data_name, liga_id, odds_api_name, actualizado) "
-            "VALUES (?, ?, ?, ?, ?, '', ?) "
+            "INSERT INTO equipos (fifa_code, nombre, football_data_id, football_data_name, liga_id, odds_api_name, escudo_url, actualizado) "
+            "VALUES (?, ?, ?, ?, ?, '', ?, ?) "
             "ON CONFLICT(football_data_id) DO UPDATE SET "
             "nombre=excluded.nombre, football_data_name=excluded.football_data_name, "
-            "liga_id=COALESCE(equipos.liga_id, excluded.liga_id), actualizado=excluded.actualizado",
-            (codigo, t.get("shortName") or t.get("name"), t["id"], t.get("name"), liga_id, ahora),
+            "liga_id=COALESCE(equipos.liga_id, excluded.liga_id), "
+            "escudo_url=COALESCE(excluded.escudo_url, equipos.escudo_url), actualizado=excluded.actualizado",
+            (codigo, t.get("shortName") or t.get("name"), t["id"], t.get("name"), liga_id, t.get("crest"), ahora),
         )
         equipo_id = conn.execute("SELECT id FROM equipos WHERE football_data_id=?", (t["id"],)).fetchone()["id"]
         conn.execute(
             "INSERT OR IGNORE INTO equipos_competicion (equipo_id, liga_id) VALUES (?, ?)", (equipo_id, liga_id)
         )
     conn.commit()
+
+    emblema = fd.competition(liga.fd_org).get("emblem")
+    if emblema:
+        conn.execute("UPDATE ligas SET emblema_url=? WHERE id=?", (emblema, liga_id))
+        conn.commit()
+
+    pendientes_color = conn.execute(
+        "SELECT id, escudo_url FROM equipos WHERE liga_id=? AND escudo_url IS NOT NULL AND color_principal IS NULL",
+        (liga_id,),
+    ).fetchall()
+    for eq in pendientes_color:
+        color = color_dominante(eq["escudo_url"])
+        if color:
+            conn.execute("UPDATE equipos SET color_principal=? WHERE id=?", (color, eq["id"]))
+    if pendientes_color:
+        conn.commit()
+        print(f"{liga.nombre}: {len(pendientes_color)} color(es) de equipo calculados")
 
     eventos = []
     if liga.odds_api:

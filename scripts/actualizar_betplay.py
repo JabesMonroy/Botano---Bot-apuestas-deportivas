@@ -10,6 +10,7 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 from src.clients.api_football import ApiFootball
 from src.config import Config, load_config
 from src.db.database import connect
+from src.imagenes import color_dominante
 from src.ligas import LIGAS
 
 DIAS_ADELANTE = 10
@@ -54,20 +55,36 @@ def actualizar(cfg: Config) -> dict:
     af.close()
 
     ahora = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    equipos_nuevos = {t["id"]: t["name"] for fx in fixtures for t in (fx["teams"]["home"], fx["teams"]["away"])}
-    for api_id, nombre in equipos_nuevos.items():
-        fila = conn.execute("SELECT id FROM equipos WHERE api_football_id=?", (api_id,)).fetchone()
+    equipos_nuevos = {
+        t["id"]: t for fx in fixtures for t in (fx["teams"]["home"], fx["teams"]["away"])
+    }
+    for api_id, t in equipos_nuevos.items():
+        nombre, logo = t["name"], t.get("logo")
+        fila = conn.execute("SELECT id, escudo_url FROM equipos WHERE api_football_id=?", (api_id,)).fetchone()
         if fila is not None:
+            if fila["escudo_url"] is None and logo:
+                conn.execute("UPDATE equipos SET escudo_url=? WHERE id=?", (logo, fila["id"]))
             continue
         import unicodedata
         base = unicodedata.normalize("NFKD", nombre).encode("ascii", "ignore").decode().split()[0][:3].upper() or "EQU"
         codigo = _codigo_unico(conn, base, api_id)
         conn.execute(
-            "INSERT INTO equipos (fifa_code, nombre, api_football_id, liga_id, odds_api_name, actualizado) "
-            "VALUES (?, ?, ?, ?, '', ?)",
-            (codigo, nombre, api_id, liga_id, ahora),
+            "INSERT INTO equipos (fifa_code, nombre, api_football_id, liga_id, odds_api_name, escudo_url, actualizado) "
+            "VALUES (?, ?, ?, ?, '', ?, ?)",
+            (codigo, nombre, api_id, liga_id, logo, ahora),
         )
     conn.commit()
+
+    pendientes_color = conn.execute(
+        "SELECT id, escudo_url FROM equipos WHERE liga_id=? AND escudo_url IS NOT NULL AND color_principal IS NULL",
+        (liga_id,),
+    ).fetchall()
+    for eq in pendientes_color:
+        color = color_dominante(eq["escudo_url"])
+        if color:
+            conn.execute("UPDATE equipos SET color_principal=? WHERE id=?", (color, eq["id"]))
+    if pendientes_color:
+        conn.commit()
 
     equipo_id_por_api = {
         r["api_football_id"]: r["id"] for r in conn.execute("SELECT id, api_football_id FROM equipos WHERE api_football_id IS NOT NULL")

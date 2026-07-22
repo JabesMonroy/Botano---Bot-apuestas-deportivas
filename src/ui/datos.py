@@ -12,7 +12,7 @@ from src.db.database import connect
 @st.cache_data(show_spinner=False)
 def cargar_ligas(cfg: Config) -> list[dict]:
     conn = connect(cfg.db_path)
-    filas = conn.execute("SELECT id, codigo, nombre FROM ligas ORDER BY nombre").fetchall()
+    filas = conn.execute("SELECT id, codigo, nombre, emblema_url FROM ligas ORDER BY nombre").fetchall()
     conn.close()
     return [dict(r) for r in filas]
 
@@ -27,6 +27,14 @@ def cargar_equipos(cfg: Config, liga_id: int) -> dict[str, str]:
     ).fetchall()
     conn.close()
     return {f"{r['nombre']} ({r['fifa_code']})": r["fifa_code"] for r in filas}
+
+
+@st.cache_data(show_spinner=False)
+def info_equipo(cfg: Config, fifa_code: str) -> dict | None:
+    conn = connect(cfg.db_path)
+    fila = conn.execute("SELECT escudo_url, color_principal FROM equipos WHERE fifa_code=?", (fifa_code,)).fetchone()
+    conn.close()
+    return dict(fila) if fila else None
 
 
 @st.cache_data(show_spinner=False)

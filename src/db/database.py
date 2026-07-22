@@ -6,6 +6,14 @@ from pathlib import Path
 SCHEMA = Path(__file__).parent / "schema.sql"
 
 
+_COLUMNAS_NUEVAS = (
+    ("apuestas", "combinada_id", "INTEGER REFERENCES combinadas(id)"),
+    ("equipos", "escudo_url", "TEXT"),
+    ("equipos", "color_principal", "TEXT"),
+    ("ligas", "emblema_url", "TEXT"),
+)
+
+
 def _migrar(conn: sqlite3.Connection) -> None:
     with conn:
         conn.execute(
@@ -13,10 +21,11 @@ def _migrar(conn: sqlite3.Connection) -> None:
             "id INTEGER PRIMARY KEY, cuota_total REAL NOT NULL, stake REAL NOT NULL, "
             "fecha TEXT NOT NULL, resultado TEXT, ganancia REAL)"
         )
-        try:
-            conn.execute("ALTER TABLE apuestas ADD COLUMN combinada_id INTEGER REFERENCES combinadas(id)")
-        except sqlite3.OperationalError:
-            pass
+        for tabla, columna, tipo in _COLUMNAS_NUEVAS:
+            try:
+                conn.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna} {tipo}")
+            except sqlite3.OperationalError:
+                pass
 
 
 def connect(db_path: Path) -> sqlite3.Connection:

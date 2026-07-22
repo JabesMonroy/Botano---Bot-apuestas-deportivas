@@ -20,7 +20,7 @@ def render(cfg: Config) -> None:
     ligas_ordenadas = sorted(ligas, key=lambda l: proximo.get(l["id"], {}).get("dias", 9999))
 
     st.title("Armar Bet Builder (Boost)")
-    liga = selector_liga.selector_competicion(cfg, ligas_ordenadas, proximo, key="bb_liga")
+    liga = selector_liga.selector_competicion(cfg, ligas_ordenadas, proximo, key="liga_global")
     st.caption("Arma una combinada que cumpla el BB Boost de Betano: ≥3 mercados, cada cuota > 1.50, total > 5.00 (+25% de ganancias). "
                "Criterio: la combinación más probable que cumpla. Solo con los próximos partidos de esta competición.")
     st.info("Las cuotas son la **cuota justa del modelo** (1÷probabilidad), no las exactas de Betano. **Verifica en Betano** que cada mercado supere 1.50 y el total 5.00 antes de apostar. No incluye mercados de goleador (el modelo no los calcula).", icon=":material/info:")

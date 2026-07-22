@@ -18,7 +18,7 @@ def render(cfg: Config) -> None:
     ligas_ordenadas = sorted(ligas, key=lambda l: proximo.get(l["id"], {}).get("dias", 9999))
 
     st.title("Analizar partido")
-    liga = selector_liga.selector_competicion(cfg, ligas_ordenadas, proximo, key="sb_liga")
+    liga = selector_liga.selector_competicion(cfg, ligas_ordenadas, proximo, key="liga_global")
     liga_nombre = liga["nombre"]
 
     fiab = fiabilidad.evaluar(cfg, liga)

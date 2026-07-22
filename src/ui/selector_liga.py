@@ -28,7 +28,12 @@ def selector_competicion(cfg: Config, ligas: list[dict], proximo: dict, key: str
         fiab = fiabilidad_mod.evaluar(cfg, liga)
         with cols[i % columnas]:
             with st.container(border=True):
-                st.markdown(f"**{liga['nombre']}**")
+                if liga.get("emblema_url"):
+                    li, ln = st.columns([1, 4])
+                    li.image(liga["emblema_url"], width=32)
+                    ln.markdown(f"**{liga['nombre']}**")
+                else:
+                    st.markdown(f":material/sports_soccer: **{liga['nombre']}**")
                 st.caption(_etiqueta_calendario(liga, proximo))
                 st.caption(f"{fiabilidad_mod.ICONO_NIVEL[fiab['nivel']]} Fiabilidad {fiab['nivel']}")
                 if st.button(
