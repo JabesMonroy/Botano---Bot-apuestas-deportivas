@@ -84,6 +84,32 @@ def _chip_equipo(nombre: str, info: dict | None) -> str:
     )
 
 
+def _color_de(info: dict | None) -> str:
+    return (info or {}).get("color_principal") or "#888888"
+
+
+def _metric_equipo(col, nombre: str, info: dict | None, valor: str, delta: str | None = None) -> None:
+    delta_html = f'<div style="font-size:0.8rem;color:rgba(49,51,63,0.6)">{delta}</div>' if delta else ""
+    col.markdown(
+        f'<div style="border-left:4px solid {_color_de(info)};padding-left:10px;margin-bottom:0.5rem">'
+        f'<div style="font-size:0.8rem;color:rgba(49,51,63,0.6)">{nombre}</div>'
+        f'<div style="font-size:1.75rem;font-weight:600;line-height:1.3">{valor}</div>'
+        f"{delta_html}</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _titulo_equipo(nombre: str, info: dict | None, sufijo: str = "") -> str:
+    return f'<span style="border-left:4px solid {_color_de(info)};padding-left:8px"><strong>{nombre}</strong>{sufijo}</span>'
+
+
+def _resaltar_equipo(col_equipo: str, nombres_colores: dict[str, str]):
+    def _estilo(fila):
+        color = nombres_colores.get(fila[col_equipo])
+        return [f"border-left: 4px solid {color}" if color else "" for _ in fila]
+    return _estilo
+
+
 def _color_ev(col):
     estilos = []
     for x in col:
@@ -108,6 +134,7 @@ def mostrar_analisis(cfg: Config, a, ctx: dict | None) -> None:
     etiqueta_grupo = (ctx and ctx.get("liga_nombre")) or (ctx and f"Grupo {ctx['grupo']}") or ""
 
     info_l, info_v = info_equipo(cfg, a.local), info_equipo(cfg, a.visita)
+    colores_equipo = {a.nombre_local: _color_de(info_l), a.nombre_visita: _color_de(info_v)}
     st.markdown(
         f"{_chip_equipo(a.nombre_local, info_l)}&nbsp;&nbsp;vs&nbsp;&nbsp;{_chip_equipo(a.nombre_visita, info_v)}",
         unsafe_allow_html=True,
@@ -182,8 +209,8 @@ def mostrar_analisis(cfg: Config, a, ctx: dict | None) -> None:
 
     st.markdown("**Doble oportunidad** (se cubren dos de los tres resultados)")
     d1, d2, d3 = st.columns(3)
-    d1.metric(f"{a.nombre_local} o empate", pct(a.modelo["1"] + a.modelo["X"]))
-    d2.metric(f"Empate o {a.nombre_visita}", pct(a.modelo["X"] + a.modelo["2"]))
+    _metric_equipo(d1, f"{a.nombre_local} o empate", info_l, pct(a.modelo["1"] + a.modelo["X"]))
+    _metric_equipo(d2, f"Empate o {a.nombre_visita}", info_v, pct(a.modelo["X"] + a.modelo["2"]))
     d3.metric(f"{a.nombre_local} o {a.nombre_visita}", pct(a.modelo["1"] + a.modelo["2"]))
     st.caption("Sale de la **misma matriz Dixon-Coles** del modelo (no es una media): se suman las probabilidades de los dos resultados que cubre cada apuesta.")
 
@@ -192,8 +219,8 @@ def mostrar_analisis(cfg: Config, a, ctx: dict | None) -> None:
         favn, favp = (a.nombre_local, av1) if av1 >= av2 else (a.nombre_visita, av2)
         st.markdown("**Clasificación a la siguiente ronda** (incluye prórroga y penales)")
         q1, q2, q3 = st.columns(3)
-        q1.metric(f"Clasifica {a.nombre_local}", pct(av1))
-        q2.metric(f"Clasifica {a.nombre_visita}", pct(av2))
+        _metric_equipo(q1, f"Clasifica {a.nombre_local}", info_l, pct(av1))
+        _metric_equipo(q2, f"Clasifica {a.nombre_visita}", info_v, pct(av2))
         q3.metric("Va a prórroga (empate 90')", pct(a.modelo["X"]))
         st.caption(
             f"Es eliminación directa: no hay empate final. **{favn} avanza con {pct(favp)}** (cuota justa {1 / favp:.2f}). "
@@ -273,8 +300,8 @@ def mostrar_analisis(cfg: Config, a, ctx: dict | None) -> None:
     tiros_l, tiros_v = a.lh / k, a.la / k
     arco_l, arco_v = tiros_l * ratio_arco, tiros_v * ratio_arco
     z1, z2, z3 = st.columns(3)
-    z1.metric(f"Tiros {a.nombre_local}", f"{tiros_l:.0f}", f"al arco ~{arco_l:.0f}")
-    z2.metric(f"Tiros {a.nombre_visita}", f"{tiros_v:.0f}", f"al arco ~{arco_v:.0f}")
+    _metric_equipo(z1, f"Tiros {a.nombre_local}", info_l, f"{tiros_l:.0f}", f"al arco ~{arco_l:.0f}")
+    _metric_equipo(z2, f"Tiros {a.nombre_visita}", info_v, f"{tiros_v:.0f}", f"al arco ~{arco_v:.0f}")
     z3.metric("Tiros totales", f"{tiros_l + tiros_v:.0f}", f"al arco ~{arco_l + arco_v:.0f}")
     zt, za = st.columns(2)
     ot = over_under(tiros_l + tiros_v, [x + 0.5 for x in range(12, 25)])
@@ -307,7 +334,8 @@ def mostrar_analisis(cfg: Config, a, ctx: dict | None) -> None:
                 fila = {"Equipo": nombre, "Esperados": f"{esp:.1f}"}
                 fila.update({f"+{l}": pct(p) for l, p in oce.items()})
                 filas_ce.append(fila)
-            col_c.dataframe(pd.DataFrame(filas_ce), hide_index=True, width="stretch")
+            df_ce = pd.DataFrame(filas_ce)
+            col_c.dataframe(df_ce.style.apply(_resaltar_equipo("Equipo", colores_equipo), axis=1), hide_index=True, width="stretch")
             col_c.caption(f"El **reparto** sí depende del dominio (corr 0.49 en datos de StatsBomb): {a.nombre_local} {cl_esp:.1f} vs {cv_esp:.1f} {a.nombre_visita}. El **total** es más ruidoso, por eso se mantiene en el promedio.")
     if a.tarjetas_esp:
         ot = over_under_nb(tarjetas_final, a.tarjetas_ratio_var, [0.5, 1.5, 2.5, 3.5, 4.5, 5.5])
@@ -330,7 +358,8 @@ def mostrar_analisis(cfg: Config, a, ctx: dict | None) -> None:
             fila = {"Equipo": nombre, "Esperados": f"{esp:.1f}"}
             fila.update({f"+{l}": pct(p) for l, p in oeq.items()})
             filas_sm.append(fila)
-        sm2.dataframe(pd.DataFrame(filas_sm), hide_index=True, width="stretch")
+        df_sm = pd.DataFrame(filas_sm)
+        sm2.dataframe(df_sm.style.apply(_resaltar_equipo("Equipo", colores_equipo), axis=1), hide_index=True, width="stretch")
         sm2.caption(
             "Saque de meta: el balón sale por la línea de fondo tocado por el rival, sin gol ni córner. "
             "Un equipo que **recibe muchos tiros desviados** o despeja mucho tiende a más saques de meta. "
@@ -339,14 +368,14 @@ def mostrar_analisis(cfg: Config, a, ctx: dict | None) -> None:
 
     st.markdown("#### Goles por equipo y primer gol")
     eq1, eq2, eq3 = st.columns(3)
-    eq1.markdown(f"**{a.nombre_local} marca…**")
+    eq1.markdown(_titulo_equipo(a.nombre_local, info_l, " marca…"), unsafe_allow_html=True)
     eq1.table(pd.DataFrame([{"Goles": x, "Más de": pct(over_equipo(a.matriz, 0, x)), "Menos de": pct(1 - over_equipo(a.matriz, 0, x))} for x in (0.5, 1.5, 2.5, 3.5)]))
-    eq2.markdown(f"**{a.nombre_visita} marca…**")
+    eq2.markdown(_titulo_equipo(a.nombre_visita, info_v, " marca…"), unsafe_allow_html=True)
     eq2.table(pd.DataFrame([{"Goles": x, "Más de": pct(over_equipo(a.matriz, 1, x)), "Menos de": pct(1 - over_equipo(a.matriz, 1, x))} for x in (0.5, 1.5, 2.5, 3.5)]))
     p_local, p_visita, p_sin = primer_gol(a.lh, a.la, float(a.matriz[0, 0]))
     eq3.markdown("**¿Quién marca primero?**")
-    eq3.metric(a.nombre_local, pct(p_local))
-    eq3.metric(a.nombre_visita, pct(p_visita))
+    _metric_equipo(eq3, a.nombre_local, info_l, pct(p_local))
+    _metric_equipo(eq3, a.nombre_visita, info_v, pct(p_visita))
     eq3.caption(f"Ningún gol: {pct(p_sin)} · estimado por el ritmo goleador de cada equipo (modelo de Poisson en el tiempo).")
 
     tot = a.lh + a.la
