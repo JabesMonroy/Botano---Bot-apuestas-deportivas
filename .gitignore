@@ -20,7 +20,7 @@ data/partidos/
 data/equipos/
 data/cache/
 
-.claude/settings.local.json
+.claude/
 
 .vscode/
 .idea/

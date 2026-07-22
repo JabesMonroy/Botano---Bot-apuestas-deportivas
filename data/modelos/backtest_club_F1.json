@@ -1,0 +1,20 @@
+{
+  "liga": "F1",
+  "xg": true,
+  "n": 483,
+  "n_cierre": 456,
+  "rps_modelo": 0.206,
+  "rps_base": 0.2341,
+  "rps_cierre": 0.2013,
+  "rps_modelo_cc": 0.2069,
+  "brier_ou_modelo": 0.2462,
+  "brier_ou_cierre": 0.2404,
+  "brier_ou_base": 0.2486,
+  "n_ou": 452,
+  "apuestas": {
+    "n": 201,
+    "clv_medio": -0.06062775832337814,
+    "clv_pos": 0.263681592039801,
+    "roi_plano": -0.10114427860696518
+  }
+}

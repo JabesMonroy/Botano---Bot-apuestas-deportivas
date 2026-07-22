@@ -6,23 +6,24 @@ Guía rápida y directa. No necesitas saber programar: todo se maneja desde un m
 
 ## La forma más fácil (recomendada): doble clic
 
-1. **Una sola vez:** doble clic en **`instalar.bat`** (prepara todo; tarda un par de minutos).
+1. **Una sola vez:** doble clic en **`instalar.bat`** (crea el entorno e instala dependencias; tarda menos de un minuto — la base de datos ya viene cargada con el Mundial 2026, no hace falta descargar nada más).
 2. **Para usarlo**, elige una:
    - **`interfaz.bat`** → abre la **versión visual** en tu navegador (menús desplegables, tablas con color, gráficos). **Recomendada.**
    - **`iniciar.bat`** → abre el **menú de texto** en una ventana, si prefieres algo ligero.
+3. Dentro de la interfaz visual, pulsa **"Refrescar datos"** en la barra lateral para traer los partidos, resultados y cuotas más recientes antes de analizar.
 
 Eso es todo. Si esto te funciona, puedes ignorar el resto del documento.
 
 > La interfaz visual se abre sola en el navegador. Para cerrarla, cierra la ventana negra que se quedó abierta.
 
-> Antes del primer `instalar.bat`, pega tus claves en el archivo `.env` (ver "Paso 1" más abajo, el punto de las claves).
+> Antes del primer `instalar.bat`, pega tus claves en el archivo `.env` (ver "Paso 1" más abajo, el punto de las claves). Sin claves, la app funciona con los datos ya cargados, pero "Refrescar datos" fallará.
 
 ---
 
 ## Alternativa por terminal (si prefieres)
 
-1. **Una sola vez:** preparar el programa (instalar y descargar datos).
-2. **Cada vez que quieras analizar:** ejecutar el menú con `python bot.py`.
+1. **Una sola vez:** crear el entorno e instalar dependencias (ver "Paso 1" más abajo).
+2. **Cada vez que quieras analizar:** ejecutar el menú con `python bot.py` (opción 1 refresca los datos).
 
 ---
 
@@ -55,13 +56,16 @@ FOOTBALL_DATA_KEY=tu_clave
 
 > Dónde sacarlas (gratis): API-Football → dashboard.api-football.com · The Odds API → the-odds-api.com · OpenWeather → openweathermap.org · football-data → football-data.org/client/register
 
-Finalmente, descarga y prepara todos los datos con **un solo comando**:
+Con eso ya está listo: `data/bot.db` viene incluida en el repositorio, cargada y actualizada a diario por
+GitHub Actions. Solo falta refrescar los partidos y cuotas del día, con el botón **"Refrescar datos"** de la
+interfaz o, por terminal:
 
 ```
-python setup.py
+python -m scripts.actualizar
 ```
 
-Esto tarda un par de minutos (descarga selecciones, Elo, valores, histórico y entrena el modelo). Al terminar, ya está listo.
+> Si en algún momento quieres **reconstruir todo desde cero** (equipos, Elo, valores, histórico, modelo
+> entrenado), corre `python setup.py`. Tarda un par de minutos y no es necesario para el uso normal.
 
 ---
 

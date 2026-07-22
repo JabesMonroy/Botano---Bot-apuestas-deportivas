@@ -8,6 +8,7 @@ from src.clients.football_data import FootballData
 from src.clients.odds_api import OddsApi
 
 SPORT = "soccer_fifa_world_cup"
+WORLD_CUP = FootballData.WORLD_CUP
 
 
 def _ahora() -> str:
@@ -34,12 +35,12 @@ def _grupo(valor: str | None) -> str | None:
     return valor.replace("_", " ").split()[-1].upper()
 
 
-def ingestar_partidos(conn: sqlite3.Connection, fd: FootballData) -> int:
+def ingestar_partidos(conn: sqlite3.Connection, fd: FootballData, codigo: int | str = WORLD_CUP, liga_id: int | None = None) -> int:
     por_fd = {
         r["football_data_id"]: r["id"]
         for r in conn.execute("SELECT id, football_data_id FROM equipos WHERE football_data_id IS NOT NULL")
     }
-    data = fd.matches()
+    data = fd.matches(codigo)
     ahora = _ahora()
     filas = []
     for m in data.get("matches", []):
@@ -58,13 +59,14 @@ def ingestar_partidos(conn: sqlite3.Connection, fd: FootballData) -> int:
                 _grupo(m.get("group")),
                 arbitro,
                 m.get("status"),
+                liga_id,
                 ahora,
             )
         )
     sql = """
         INSERT INTO partidos (
-            football_data_id, fecha, equipo_local_id, equipo_visita_id, fase, grupo, arbitro, estado, actualizado
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            football_data_id, fecha, equipo_local_id, equipo_visita_id, fase, grupo, arbitro, estado, liga_id, actualizado
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(football_data_id) DO UPDATE SET
             fecha = excluded.fecha,
             equipo_local_id = excluded.equipo_local_id,
@@ -73,6 +75,7 @@ def ingestar_partidos(conn: sqlite3.Connection, fd: FootballData) -> int:
             grupo = excluded.grupo,
             arbitro = excluded.arbitro,
             estado = excluded.estado,
+            liga_id = excluded.liga_id,
             actualizado = excluded.actualizado
     """
     with conn:
@@ -80,12 +83,12 @@ def ingestar_partidos(conn: sqlite3.Connection, fd: FootballData) -> int:
     return len(filas)
 
 
-def ingestar_resultados(conn: sqlite3.Connection, fd: FootballData) -> int:
+def ingestar_resultados(conn: sqlite3.Connection, fd: FootballData, codigo: int | str = WORLD_CUP) -> int:
     por_match = {
         r["football_data_id"]: r["id"]
         for r in conn.execute("SELECT id, football_data_id FROM partidos WHERE football_data_id IS NOT NULL")
     }
-    data = fd.matches()
+    data = fd.matches(codigo)
     filas = []
     for m in data.get("matches", []):
         pid = por_match.get(m.get("id"))
@@ -109,18 +112,18 @@ def ingestar_resultados(conn: sqlite3.Connection, fd: FootballData) -> int:
     return len(filas)
 
 
-def ingestar_standings(conn: sqlite3.Connection, fd: FootballData) -> int:
+def ingestar_standings(conn: sqlite3.Connection, fd: FootballData, codigo: int | str = WORLD_CUP, grupo_default: str | None = None) -> int:
     por_fd = {
         r["football_data_id"]: r["id"]
         for r in conn.execute("SELECT id, football_data_id FROM equipos WHERE football_data_id IS NOT NULL")
     }
-    st = fd.standings()
+    st = fd.standings(codigo)
     ahora = _ahora()
     filas = []
     for grupo in st.get("standings", []):
         if grupo.get("type") not in (None, "TOTAL"):
             continue
-        g = _grupo(grupo.get("group"))
+        g = grupo_default or _grupo(grupo.get("group"))
         for fila in grupo.get("table", []):
             eq = por_fd.get((fila.get("team") or {}).get("id"))
             if eq is None:
@@ -232,12 +235,12 @@ def _guardar_btts(conn: sqlite3.Connection, partido: int, casa: str, mercado: di
     return len(filas)
 
 
-def ingestar_cuotas(conn: sqlite3.Connection, odds: OddsApi, casa: str = "pinnacle") -> dict[str, int]:
+def ingestar_cuotas(conn: sqlite3.Connection, odds: OddsApi, casa: str = "pinnacle", sport: str = SPORT) -> dict[str, int]:
     por_odds = {
         _norm(r["odds_api_name"]): r
         for r in conn.execute("SELECT id, fifa_code, odds_api_name FROM equipos WHERE odds_api_name != ''")
     }
-    eventos = odds.odds(SPORT, markets="h2h,totals", bookmakers=casa)
+    eventos = odds.odds(sport, markets="h2h,totals", bookmakers=casa)
     ahora = _ahora()
     conteo = {"1x2": 0, "totals": 0, "btts": 0}
     ahora_dt = datetime.now(timezone.utc)

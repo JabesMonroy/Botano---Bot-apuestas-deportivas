@@ -21,8 +21,8 @@ class ApiFootball:
     def teams(self, **params: Any) -> dict[str, Any]:
         return self._client.get("/teams", params=params)
 
-    def fixtures(self, **params: Any) -> dict[str, Any]:
-        return self._client.get("/fixtures", params=params)
+    def fixtures(self, ttl: float = 86400, **params: Any) -> dict[str, Any]:
+        return self._client.get("/fixtures", params=params, ttl=ttl)
 
     def head_to_head(self, h2h: str, **params: Any) -> dict[str, Any]:
         return self._client.get("/fixtures/headtohead", params={"h2h": h2h, **params})

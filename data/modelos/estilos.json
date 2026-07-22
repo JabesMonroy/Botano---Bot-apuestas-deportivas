@@ -1,0 +1,1278 @@
+{
+  "actualizado": "2026-07-13T19:09:47.606579+00:00",
+  "noticias_fecha": "2026-07-09",
+  "medias_torneo": {
+    "xg": 1.1130697916666665,
+    "tiros": 11.736111111111112,
+    "saques": 7.781944444444445,
+    "xg_por_tiro": 0.09484144970414199
+  },
+  "equipos": {
+    "AUS": {
+      "nombre": "Australia",
+      "pj": 4,
+      "stats": {
+        "xg_favor": 0.591,
+        "xg_contra": 1.03,
+        "goles_favor": 0.75,
+        "goles_contra": 0.75,
+        "tiros_favor": 9.5,
+        "tiros_contra": 14.25,
+        "corners_favor": 4.0,
+        "corners_contra": 4.75,
+        "tarjetas": 1.25,
+        "saques_favor": 8.75,
+        "saques_contra": 8.25,
+        "xg_por_tiro": 0.062
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "partidos cerrados"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "IRN": {
+      "nombre": "Irán",
+      "pj": 3,
+      "stats": {
+        "xg_favor": 1.402,
+        "xg_contra": 1.466,
+        "goles_favor": 1.0,
+        "goles_contra": 1.0,
+        "tiros_favor": 12.333,
+        "tiros_contra": 17.333,
+        "corners_favor": 2.667,
+        "corners_contra": 4.333,
+        "tarjetas": 2.0,
+        "saques_favor": 8.667,
+        "saques_contra": 8.0,
+        "xg_por_tiro": 0.114
+      },
+      "etiquetas": [
+        "frágil atrás",
+        "friccionador (tarjetas)"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "IRQ": {
+      "nombre": "Irak",
+      "pj": 3,
+      "stats": {
+        "xg_favor": 0.694,
+        "xg_contra": 2.557,
+        "goles_favor": 0.333,
+        "goles_contra": 4.0,
+        "tiros_favor": 7.0,
+        "tiros_contra": 19.667,
+        "corners_favor": 2.333,
+        "corners_contra": 7.0,
+        "tarjetas": 1.667,
+        "saques_favor": 14.667,
+        "saques_contra": 5.667,
+        "xg_por_tiro": 0.099
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "frágil atrás",
+        "bloque bajo y juego directo",
+        "friccionador (tarjetas)",
+        "partidos abiertos"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "JOR": {
+      "nombre": "Jordania",
+      "pj": 3,
+      "stats": {
+        "xg_favor": 0.51,
+        "xg_contra": 1.951,
+        "goles_favor": 1.0,
+        "goles_contra": 2.667,
+        "tiros_favor": 8.0,
+        "tiros_contra": 13.333,
+        "corners_favor": 2.0,
+        "corners_contra": 6.667,
+        "tarjetas": 1.333,
+        "saques_favor": 8.667,
+        "saques_contra": 4.333,
+        "xg_por_tiro": 0.064
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "frágil atrás"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "JPN": {
+      "nombre": "Japón",
+      "pj": 4,
+      "stats": {
+        "xg_favor": 0.817,
+        "xg_contra": 0.863,
+        "goles_favor": 2.0,
+        "goles_contra": 1.25,
+        "tiros_favor": 8.5,
+        "tiros_contra": 10.5,
+        "corners_favor": 3.25,
+        "corners_contra": 5.5,
+        "tarjetas": 1.0,
+        "saques_favor": 7.0,
+        "saques_contra": 5.25,
+        "xg_por_tiro": 0.096
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "sólido atrás",
+        "definición clínica (sobre xG)",
+        "partidos cerrados"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "KOR": {
+      "nombre": "Corea del Sur",
+      "pj": 3,
+      "stats": {
+        "xg_favor": 1.29,
+        "xg_contra": 0.796,
+        "goles_favor": 0.667,
+        "goles_contra": 1.0,
+        "tiros_favor": 10.667,
+        "tiros_contra": 9.333,
+        "corners_favor": 4.0,
+        "corners_contra": 3.333,
+        "tarjetas": 1.333,
+        "saques_favor": 4.667,
+        "saques_contra": 8.333,
+        "xg_por_tiro": 0.121
+      },
+      "etiquetas": [
+        "sólido atrás",
+        "partidos cerrados"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "KSA": {
+      "nombre": "Arabia Saudita",
+      "pj": 3,
+      "stats": {
+        "xg_favor": 0.531,
+        "xg_contra": 1.839,
+        "goles_favor": 0.333,
+        "goles_contra": 1.667,
+        "tiros_favor": 5.667,
+        "tiros_contra": 21.333,
+        "corners_favor": 2.333,
+        "corners_contra": 8.0,
+        "tarjetas": 2.0,
+        "saques_favor": 12.667,
+        "saques_contra": 3.0,
+        "xg_por_tiro": 0.094
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "frágil atrás",
+        "bloque bajo y juego directo",
+        "friccionador (tarjetas)"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "QAT": {
+      "nombre": "Catar",
+      "pj": 3,
+      "stats": {
+        "xg_favor": 0.504,
+        "xg_contra": 2.83,
+        "goles_favor": 0.667,
+        "goles_contra": 3.333,
+        "tiros_favor": 5.667,
+        "tiros_contra": 24.0,
+        "corners_favor": 3.0,
+        "corners_contra": 11.333,
+        "tarjetas": 2.0,
+        "saques_favor": 11.333,
+        "saques_contra": 5.0,
+        "xg_por_tiro": 0.089
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "frágil atrás",
+        "bloque bajo y juego directo",
+        "friccionador (tarjetas)",
+        "partidos abiertos"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "UZB": {
+      "nombre": "Uzbekistán",
+      "pj": 3,
+      "stats": {
+        "xg_favor": 0.552,
+        "xg_contra": 1.899,
+        "goles_favor": 0.667,
+        "goles_contra": 3.667,
+        "tiros_favor": 6.0,
+        "tiros_contra": 17.0,
+        "corners_favor": 3.0,
+        "corners_contra": 3.0,
+        "tarjetas": 1.333,
+        "saques_favor": 10.333,
+        "saques_contra": 6.667,
+        "xg_por_tiro": 0.092
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "frágil atrás",
+        "bloque bajo y juego directo"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "ALG": {
+      "nombre": "Argelia",
+      "pj": 4,
+      "stats": {
+        "xg_favor": 0.996,
+        "xg_contra": 1.004,
+        "goles_favor": 1.25,
+        "goles_contra": 2.25,
+        "tiros_favor": 11.0,
+        "tiros_contra": 9.75,
+        "corners_favor": 3.5,
+        "corners_contra": 2.5,
+        "tarjetas": 0.75,
+        "saques_favor": 6.25,
+        "saques_contra": 7.0,
+        "xg_por_tiro": 0.091
+      },
+      "etiquetas": [
+        "partidos cerrados"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "CIV": {
+      "nombre": "Costa de Marfil",
+      "pj": 4,
+      "stats": {
+        "xg_favor": 1.407,
+        "xg_contra": 1.245,
+        "goles_favor": 1.25,
+        "goles_contra": 1.0,
+        "tiros_favor": 11.25,
+        "tiros_contra": 12.0,
+        "corners_favor": 6.5,
+        "corners_contra": 5.25,
+        "tarjetas": 1.0,
+        "saques_favor": 6.5,
+        "saques_contra": 8.0,
+        "xg_por_tiro": 0.125
+      },
+      "etiquetas": [
+        "ocasiones de alta calidad"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "COD": {
+      "nombre": "RD Congo",
+      "pj": 4,
+      "stats": {
+        "xg_favor": 1.012,
+        "xg_contra": 1.012,
+        "goles_favor": 1.25,
+        "goles_contra": 1.25,
+        "tiros_favor": 10.5,
+        "tiros_contra": 11.5,
+        "corners_favor": 3.25,
+        "corners_contra": 4.75,
+        "tarjetas": 1.5,
+        "saques_favor": 10.5,
+        "saques_contra": 9.0,
+        "xg_por_tiro": 0.096
+      },
+      "etiquetas": [
+        "bloque bajo y juego directo",
+        "friccionador (tarjetas)",
+        "partidos cerrados"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "CPV": {
+      "nombre": "Cabo Verde",
+      "pj": 4,
+      "stats": {
+        "xg_favor": 0.51,
+        "xg_contra": 1.427,
+        "goles_favor": 0.75,
+        "goles_contra": 0.75,
+        "tiros_favor": 9.75,
+        "tiros_contra": 16.5,
+        "corners_favor": 2.75,
+        "corners_contra": 7.25,
+        "tarjetas": 1.25,
+        "saques_favor": 9.5,
+        "saques_contra": 6.5,
+        "xg_por_tiro": 0.052
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "frágil atrás",
+        "bloque bajo y juego directo",
+        "partidos cerrados"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "EGY": {
+      "nombre": "Egipto",
+      "pj": 5,
+      "stats": {
+        "xg_favor": 0.978,
+        "xg_contra": 1.491,
+        "goles_favor": 1.6,
+        "goles_contra": 1.4,
+        "tiros_favor": 12.6,
+        "tiros_contra": 14.0,
+        "corners_favor": 4.6,
+        "corners_contra": 3.6,
+        "tarjetas": 2.2,
+        "saques_favor": 9.0,
+        "saques_contra": 5.6,
+        "xg_por_tiro": 0.078
+      },
+      "etiquetas": [
+        "frágil atrás",
+        "mucho tiro de bajo valor",
+        "definición clínica (sobre xG)",
+        "friccionador (tarjetas)"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "GHA": {
+      "nombre": "Ghana",
+      "pj": 4,
+      "stats": {
+        "xg_favor": 0.645,
+        "xg_contra": 1.02,
+        "goles_favor": 0.5,
+        "goles_contra": 0.75,
+        "tiros_favor": 6.0,
+        "tiros_contra": 14.5,
+        "corners_favor": 2.0,
+        "corners_contra": 4.25,
+        "tarjetas": 1.5,
+        "saques_favor": 9.75,
+        "saques_contra": 6.5,
+        "xg_por_tiro": 0.107
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "bloque bajo y juego directo",
+        "friccionador (tarjetas)",
+        "partidos cerrados"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "MAR": {
+      "nombre": "Marruecos",
+      "pj": 5,
+      "stats": {
+        "xg_favor": 1.106,
+        "xg_contra": 0.781,
+        "goles_favor": 2.0,
+        "goles_contra": 0.8,
+        "tiros_favor": 12.6,
+        "tiros_contra": 8.6,
+        "corners_favor": 4.8,
+        "corners_contra": 5.0,
+        "tarjetas": 1.2,
+        "saques_favor": 4.2,
+        "saques_contra": 5.6,
+        "xg_por_tiro": 0.088
+      },
+      "etiquetas": [
+        "sólido atrás",
+        "mucho tiro de bajo valor",
+        "definición clínica (sobre xG)",
+        "partidos cerrados"
+      ],
+      "nota": "Bloque compacto y disciplinado (Ouahbi) con salida limpia bajo presión vía el doble pivote El Aynaoui–Bouaddi; falso nueve (Saibari) y carga del juego por la derecha con Hakimi muy adelantado, lo que deja espacio a su espalda en la transición defensiva. Bounou y la zaga sostienen la invicta mentalidad defensiva desde Qatar 2022.",
+      "fuentes": [
+        "https://www.rotowire.com/soccer/article/france-vs-morocco-preview-predicted-lineups-team-news-tactical-analysis-2026-world-cup-quarterfinal-121621",
+        "https://www.aljazeera.com/sports/2026/7/9/france-morocco-world-cup-quarterfinal-mbappe-saibari-prediction-start-time-lineups",
+        "https://www.moroccoworldnews.com/2026/07/328082/aboucherouane-breaks-down-moroccos-style-ahead-of-france-match/"
+      ]
+    },
+    "RSA": {
+      "nombre": "Sudáfrica",
+      "pj": 4,
+      "stats": {
+        "xg_favor": 0.624,
+        "xg_contra": 1.093,
+        "goles_favor": 0.5,
+        "goles_contra": 1.0,
+        "tiros_favor": 9.75,
+        "tiros_contra": 12.5,
+        "corners_favor": 2.75,
+        "corners_contra": 4.5,
+        "tarjetas": 1.75,
+        "saques_favor": 10.5,
+        "saques_contra": 5.5,
+        "xg_por_tiro": 0.064
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "bloque bajo y juego directo",
+        "friccionador (tarjetas)",
+        "partidos cerrados"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "SEN": {
+      "nombre": "Senegal",
+      "pj": 4,
+      "stats": {
+        "xg_favor": 1.945,
+        "xg_contra": 0.902,
+        "goles_favor": 2.5,
+        "goles_contra": 2.0,
+        "tiros_favor": 15.75,
+        "tiros_contra": 11.5,
+        "corners_favor": 5.25,
+        "corners_contra": 4.5,
+        "tarjetas": 0.75,
+        "saques_favor": 5.25,
+        "saques_contra": 11.25,
+        "xg_por_tiro": 0.124
+      },
+      "etiquetas": [
+        "muy ofensivo",
+        "encierra al rival",
+        "definición clínica (sobre xG)"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "TUN": {
+      "nombre": "Túnez",
+      "pj": 3,
+      "stats": {
+        "xg_favor": 0.321,
+        "xg_contra": 1.559,
+        "goles_favor": 0.667,
+        "goles_contra": 4.0,
+        "tiros_favor": 6.0,
+        "tiros_contra": 14.667,
+        "corners_favor": 3.0,
+        "corners_contra": 5.0,
+        "tarjetas": 0.333,
+        "saques_favor": 8.0,
+        "saques_contra": 5.667,
+        "xg_por_tiro": 0.054
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "frágil atrás",
+        "disciplinado",
+        "partidos cerrados"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "CAN": {
+      "nombre": "Canadá",
+      "pj": 5,
+      "stats": {
+        "xg_favor": 1.837,
+        "xg_contra": 0.473,
+        "goles_favor": 1.8,
+        "goles_contra": 1.2,
+        "tiros_favor": 16.0,
+        "tiros_contra": 5.4,
+        "corners_favor": 10.0,
+        "corners_contra": 1.8,
+        "tarjetas": 2.2,
+        "saques_favor": 3.8,
+        "saques_contra": 10.0,
+        "xg_por_tiro": 0.115
+      },
+      "etiquetas": [
+        "ofensivo",
+        "muy sólido atrás",
+        "dominador territorial",
+        "encierra al rival",
+        "friccionador (tarjetas)"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "CUW": {
+      "nombre": "Curazao",
+      "pj": 3,
+      "stats": {
+        "xg_favor": 0.498,
+        "xg_contra": 2.448,
+        "goles_favor": 0.333,
+        "goles_contra": 3.0,
+        "tiros_favor": 9.667,
+        "tiros_contra": 20.0,
+        "corners_favor": 1.667,
+        "corners_contra": 7.667,
+        "tarjetas": 2.333,
+        "saques_favor": 10.0,
+        "saques_contra": 6.0,
+        "xg_por_tiro": 0.052
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "frágil atrás",
+        "bloque bajo y juego directo",
+        "friccionador (tarjetas)"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "HAI": {
+      "nombre": "Haití",
+      "pj": 3,
+      "stats": {
+        "xg_favor": 0.764,
+        "xg_contra": 1.653,
+        "goles_favor": 0.667,
+        "goles_contra": 2.667,
+        "tiros_favor": 10.333,
+        "tiros_contra": 13.0,
+        "corners_favor": 3.0,
+        "corners_contra": 5.333,
+        "tarjetas": 2.333,
+        "saques_favor": 6.667,
+        "saques_contra": 7.0,
+        "xg_por_tiro": 0.074
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "frágil atrás",
+        "friccionador (tarjetas)"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "MEX": {
+      "nombre": "México",
+      "pj": 5,
+      "stats": {
+        "xg_favor": 1.188,
+        "xg_contra": 0.827,
+        "goles_favor": 2.0,
+        "goles_contra": 0.6,
+        "tiros_favor": 14.0,
+        "tiros_contra": 7.6,
+        "corners_favor": 4.0,
+        "corners_contra": 3.6,
+        "tarjetas": 1.0,
+        "saques_favor": 7.6,
+        "saques_contra": 10.2,
+        "xg_por_tiro": 0.085
+      },
+      "etiquetas": [
+        "sólido atrás",
+        "dominador territorial",
+        "encierra al rival",
+        "mucho tiro de bajo valor",
+        "definición clínica (sobre xG)",
+        "partidos cerrados"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "PAN": {
+      "nombre": "Panamá",
+      "pj": 3,
+      "stats": {
+        "xg_favor": 0.701,
+        "xg_contra": 1.182,
+        "goles_favor": 0.0,
+        "goles_contra": 1.333,
+        "tiros_favor": 10.667,
+        "tiros_contra": 10.333,
+        "corners_favor": 4.0,
+        "corners_contra": 3.667,
+        "tarjetas": 1.667,
+        "saques_favor": 9.0,
+        "saques_contra": 8.667,
+        "xg_por_tiro": 0.066
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "friccionador (tarjetas)",
+        "partidos cerrados"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "USA": {
+      "nombre": "Estados Unidos",
+      "pj": 5,
+      "stats": {
+        "xg_favor": 1.265,
+        "xg_contra": 1.269,
+        "goles_favor": 2.2,
+        "goles_contra": 1.6,
+        "tiros_favor": 11.8,
+        "tiros_contra": 9.6,
+        "corners_favor": 5.2,
+        "corners_contra": 3.0,
+        "tarjetas": 1.6,
+        "saques_favor": 5.4,
+        "saques_contra": 7.0,
+        "xg_por_tiro": 0.107
+      },
+      "etiquetas": [
+        "definición clínica (sobre xG)",
+        "friccionador (tarjetas)"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "ARG": {
+      "nombre": "Argentina",
+      "pj": 5,
+      "stats": {
+        "xg_favor": 1.718,
+        "xg_contra": 0.397,
+        "goles_favor": 2.4,
+        "goles_contra": 0.8,
+        "tiros_favor": 13.6,
+        "tiros_contra": 5.8,
+        "corners_favor": 4.0,
+        "corners_contra": 2.0,
+        "tarjetas": 0.4,
+        "saques_favor": 4.6,
+        "saques_contra": 7.4,
+        "xg_por_tiro": 0.126
+      },
+      "etiquetas": [
+        "ofensivo",
+        "muy sólido atrás",
+        "dominador territorial",
+        "ocasiones de alta calidad",
+        "definición clínica (sobre xG)",
+        "disciplinado"
+      ],
+      "nota": "Flexible (Scaloni: 4-3-3/4-4-2/4-2-3-1): mediocampo técnico (Mac Allister, Enzo, De Paul) que controla el tempo, presión por gatillos —no constante— liderada por Álvarez, y Messi libre entre líneas sin obligaciones defensivas. Muy sólida atrás y clínica en la definición.",
+      "fuentes": [
+        "https://tacticalfootballanalysis.com/lionel-scaloni-tactics-argentina-2026-world-cup-tactical-analysis/",
+        "https://fwctimes.com/argentina-playing-style-world-cup/",
+        "https://fwcumc.com/news/argentina-playing-style/"
+      ]
+    },
+    "BRA": {
+      "nombre": "Brasil",
+      "pj": 5,
+      "stats": {
+        "xg_favor": 1.684,
+        "xg_contra": 0.811,
+        "goles_favor": 2.0,
+        "goles_contra": 0.8,
+        "tiros_favor": 14.8,
+        "tiros_contra": 9.8,
+        "corners_favor": 5.6,
+        "corners_contra": 4.0,
+        "tarjetas": 1.6,
+        "saques_favor": 4.2,
+        "saques_contra": 7.6,
+        "xg_por_tiro": 0.114
+      },
+      "etiquetas": [
+        "ofensivo",
+        "sólido atrás",
+        "friccionador (tarjetas)"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "COL": {
+      "nombre": "Colombia",
+      "pj": 5,
+      "stats": {
+        "xg_favor": 1.216,
+        "xg_contra": 0.64,
+        "goles_favor": 1.0,
+        "goles_contra": 0.2,
+        "tiros_favor": 17.2,
+        "tiros_contra": 8.6,
+        "corners_favor": 4.2,
+        "corners_contra": 2.8,
+        "tarjetas": 1.4,
+        "saques_favor": 9.8,
+        "saques_contra": 9.6,
+        "xg_por_tiro": 0.071
+      },
+      "etiquetas": [
+        "muy sólido atrás",
+        "dominador territorial",
+        "bloque bajo y juego directo",
+        "encierra al rival",
+        "mucho tiro de bajo valor",
+        "partidos cerrados"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "ECU": {
+      "nombre": "Ecuador",
+      "pj": 4,
+      "stats": {
+        "xg_favor": 1.669,
+        "xg_contra": 0.894,
+        "goles_favor": 0.5,
+        "goles_contra": 1.0,
+        "tiros_favor": 13.25,
+        "tiros_contra": 12.75,
+        "corners_favor": 6.5,
+        "corners_contra": 2.0,
+        "tarjetas": 2.25,
+        "saques_favor": 8.75,
+        "saques_contra": 9.75,
+        "xg_por_tiro": 0.126
+      },
+      "etiquetas": [
+        "ofensivo",
+        "sólido atrás",
+        "encierra al rival",
+        "ocasiones de alta calidad",
+        "friccionador (tarjetas)"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "PAR": {
+      "nombre": "Paraguay",
+      "pj": 5,
+      "stats": {
+        "xg_favor": 0.417,
+        "xg_contra": 1.286,
+        "goles_favor": 0.6,
+        "goles_contra": 1.2,
+        "tiros_favor": 7.0,
+        "tiros_contra": 17.8,
+        "corners_favor": 1.6,
+        "corners_contra": 8.0,
+        "tarjetas": 1.8,
+        "saques_favor": 10.2,
+        "saques_contra": 5.2,
+        "xg_por_tiro": 0.06
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "bloque bajo y juego directo",
+        "friccionador (tarjetas)",
+        "partidos cerrados"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "URU": {
+      "nombre": "Uruguay",
+      "pj": 3,
+      "stats": {
+        "xg_favor": 1.233,
+        "xg_contra": 0.676,
+        "goles_favor": 1.0,
+        "goles_contra": 1.333,
+        "tiros_favor": 16.333,
+        "tiros_contra": 8.333,
+        "corners_favor": 8.667,
+        "corners_contra": 4.667,
+        "tarjetas": 2.0,
+        "saques_favor": 4.0,
+        "saques_contra": 9.333,
+        "xg_por_tiro": 0.076
+      },
+      "etiquetas": [
+        "sólido atrás",
+        "dominador territorial",
+        "encierra al rival",
+        "mucho tiro de bajo valor",
+        "friccionador (tarjetas)",
+        "partidos cerrados"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "NZL": {
+      "nombre": "Nueva Zelanda",
+      "pj": 3,
+      "stats": {
+        "xg_favor": 0.926,
+        "xg_contra": 2.207,
+        "goles_favor": 1.333,
+        "goles_contra": 3.333,
+        "tiros_favor": 10.333,
+        "tiros_contra": 23.667,
+        "corners_favor": 3.333,
+        "corners_contra": 5.333,
+        "tarjetas": 1.333,
+        "saques_favor": 10.333,
+        "saques_contra": 3.333,
+        "xg_por_tiro": 0.09
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "frágil atrás",
+        "bloque bajo y juego directo",
+        "partidos abiertos"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "AUT": {
+      "nombre": "Austria",
+      "pj": 4,
+      "stats": {
+        "xg_favor": 0.778,
+        "xg_contra": 1.409,
+        "goles_favor": 1.5,
+        "goles_contra": 2.25,
+        "tiros_favor": 8.0,
+        "tiros_contra": 14.5,
+        "corners_favor": 2.5,
+        "corners_contra": 3.25,
+        "tarjetas": 1.25,
+        "saques_favor": 5.25,
+        "saques_contra": 8.0,
+        "xg_por_tiro": 0.097
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "frágil atrás",
+        "definición clínica (sobre xG)"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "BEL": {
+      "nombre": "Bélgica",
+      "pj": 5,
+      "stats": {
+        "xg_favor": 2.002,
+        "xg_contra": 1.006,
+        "goles_favor": 2.4,
+        "goles_contra": 1.0,
+        "tiros_favor": 20.8,
+        "tiros_contra": 9.4,
+        "corners_favor": 4.6,
+        "corners_contra": 3.6,
+        "tarjetas": 1.2,
+        "saques_favor": 4.6,
+        "saques_contra": 9.8,
+        "xg_por_tiro": 0.096
+      },
+      "etiquetas": [
+        "muy ofensivo",
+        "dominador territorial",
+        "encierra al rival",
+        "partidos abiertos"
+      ],
+      "nota": "Posesión con propósito (R. García, 3-4-2-1/4-2-3-1): verticalidad hacia Doku y Lukaku con De Bruyne libre como creador y sin cargas defensivas; presión dirigida que fuerza al lateral rival. Repliega en 5-4-1 y concede llegadas; rota mucho (Doku y KDB fueron suplentes ante USA).",
+      "fuentes": [
+        "https://tacticalfootballanalysis.com/rudi-garcia-tactics-belgium-2026-world-cup-tactical-analysis/",
+        "https://www.sportsmole.co.uk/football/belgium/world-cup-2026/predicted-lineups/de-bruyne-recalled-doku-benched-again-predicted-belgium-lineup-vs-spain_600884.html"
+      ]
+    },
+    "BIH": {
+      "nombre": "Bosnia y Herzegovina",
+      "pj": 4,
+      "stats": {
+        "xg_favor": 0.7,
+        "xg_contra": 1.259,
+        "goles_favor": 1.25,
+        "goles_contra": 2.0,
+        "tiros_favor": 9.25,
+        "tiros_contra": 10.75,
+        "corners_favor": 3.75,
+        "corners_contra": 6.25,
+        "tarjetas": 2.25,
+        "saques_favor": 9.0,
+        "saques_contra": 5.75,
+        "xg_por_tiro": 0.076
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "definición clínica (sobre xG)",
+        "friccionador (tarjetas)",
+        "partidos cerrados"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "CRO": {
+      "nombre": "Croacia",
+      "pj": 4,
+      "stats": {
+        "xg_favor": 0.806,
+        "xg_contra": 1.74,
+        "goles_favor": 1.5,
+        "goles_contra": 1.75,
+        "tiros_favor": 9.25,
+        "tiros_contra": 12.75,
+        "corners_favor": 3.0,
+        "corners_contra": 6.5,
+        "tarjetas": 1.0,
+        "saques_favor": 9.0,
+        "saques_contra": 6.0,
+        "xg_por_tiro": 0.087
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "frágil atrás",
+        "definición clínica (sobre xG)"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "CZE": {
+      "nombre": "República Checa",
+      "pj": 3,
+      "stats": {
+        "xg_favor": 0.839,
+        "xg_contra": 1.462,
+        "goles_favor": 0.667,
+        "goles_contra": 2.0,
+        "tiros_favor": 11.333,
+        "tiros_contra": 14.333,
+        "corners_favor": 5.0,
+        "corners_contra": 3.333,
+        "tarjetas": 0.333,
+        "saques_favor": 9.0,
+        "saques_contra": 8.333,
+        "xg_por_tiro": 0.074
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "frágil atrás",
+        "disciplinado"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "ENG": {
+      "nombre": "Inglaterra",
+      "pj": 5,
+      "stats": {
+        "xg_favor": 1.928,
+        "xg_contra": 0.962,
+        "goles_favor": 2.2,
+        "goles_contra": 1.0,
+        "tiros_favor": 16.0,
+        "tiros_contra": 10.4,
+        "corners_favor": 6.2,
+        "corners_contra": 4.4,
+        "tarjetas": 1.6,
+        "saques_favor": 6.6,
+        "saques_contra": 10.2,
+        "xg_por_tiro": 0.121
+      },
+      "etiquetas": [
+        "muy ofensivo",
+        "encierra al rival",
+        "friccionador (tarjetas)"
+      ],
+      "nota": "Presión alta y control posicional (Tuchel): dominó la posesión (70% o más en la clasificación), laterales agresivos y balón parado como arma declarada. Crítica recurrente: circulación lateral conservadora en el último tercio; equipo friccionador (lidera tarjetas entre los ocho).",
+      "fuentes": [
+        "https://tacticalfootballanalysis.com/thomas-tuchel-tactics-at-england-2026-building-a-world-cup-ready-system-tactical-analysis/",
+        "https://www.mykhel.com/football/england-world-cup-2026-tactics-what-thomas-tuchel-must-fix-for-the-knockouts-443575.html",
+        "https://tacticalfootballanalysis.com/thomas-tuchel-set-piece-tactics-england-2026-analysis/"
+      ]
+    },
+    "ESP": {
+      "nombre": "España",
+      "pj": 5,
+      "stats": {
+        "xg_favor": 1.695,
+        "xg_contra": 0.377,
+        "goles_favor": 1.8,
+        "goles_contra": 0.0,
+        "tiros_favor": 18.6,
+        "tiros_contra": 5.8,
+        "corners_favor": 7.8,
+        "corners_contra": 1.2,
+        "tarjetas": 0.6,
+        "saques_favor": 5.0,
+        "saques_contra": 9.8,
+        "xg_por_tiro": 0.091
+      },
+      "etiquetas": [
+        "ofensivo",
+        "muy sólido atrás",
+        "dominador territorial",
+        "encierra al rival",
+        "disciplinado",
+        "partidos cerrados"
+      ],
+      "nota": "Posesión posicional (De la Fuente): 4-3-3 que muta a 3-2-5 en fase ofensiva, Rodri de ancla y triángulos en el mediocampo; más vertical que el tópico del tiki-taka, ataca temprano por las bandas. Riesgo conocido: línea alta vulnerable al balón a la espalda de los centrales.",
+      "fuentes": [
+        "https://tacticalfootballanalysis.com/luis-de-la-fuente-tactics-spain-2026-world-cup-analysis/",
+        "https://fwcumc.com/news/spain-playing-style/",
+        "https://fwctimes.com/spain-playing-style-world-cup/"
+      ]
+    },
+    "FRA": {
+      "nombre": "Francia",
+      "pj": 5,
+      "stats": {
+        "xg_favor": 1.354,
+        "xg_contra": 0.687,
+        "goles_favor": 2.8,
+        "goles_contra": 0.4,
+        "tiros_favor": 17.6,
+        "tiros_contra": 6.6,
+        "corners_favor": 7.2,
+        "corners_contra": 2.6,
+        "tarjetas": 0.8,
+        "saques_favor": 6.2,
+        "saques_contra": 9.2,
+        "xg_por_tiro": 0.077
+      },
+      "etiquetas": [
+        "sólido atrás",
+        "dominador territorial",
+        "mucho tiro de bajo valor",
+        "definición clínica (sobre xG)",
+        "partidos cerrados"
+      ],
+      "nota": "Pragmática y adaptativa (Deschamps): bloque medio sólido con Kanté/Tchouaméni de escudo y transiciones verticales rápidas hacia Mbappé (cae al costado izquierdo o baja a recibir) y Dembélé/Barcola. No impone posesión: ajusta el plan partido a partido según el rival.",
+      "fuentes": [
+        "https://tacticalfootballanalysis.com/didier-deschamps-tactics-france-2026-world-cup-tactical-analysis/",
+        "https://fwcumc.com/news/france-playing-style/",
+        "https://worldsoccertalk.com/world-cup/france-2026-world-cup-preview-squad-breakdown-key-player-and-tactical-analysis/"
+      ]
+    },
+    "GER": {
+      "nombre": "Alemania",
+      "pj": 4,
+      "stats": {
+        "xg_favor": 1.515,
+        "xg_contra": 1.082,
+        "goles_favor": 2.75,
+        "goles_contra": 1.25,
+        "tiros_favor": 16.75,
+        "tiros_contra": 7.75,
+        "corners_favor": 7.0,
+        "corners_contra": 2.75,
+        "tarjetas": 0.25,
+        "saques_favor": 4.25,
+        "saques_contra": 8.25,
+        "xg_por_tiro": 0.09
+      },
+      "etiquetas": [
+        "ofensivo",
+        "dominador territorial",
+        "definición clínica (sobre xG)",
+        "disciplinado"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "NED": {
+      "nombre": "Países Bajos",
+      "pj": 4,
+      "stats": {
+        "xg_favor": 1.315,
+        "xg_contra": 0.652,
+        "goles_favor": 2.75,
+        "goles_contra": 1.25,
+        "tiros_favor": 11.5,
+        "tiros_contra": 11.5,
+        "corners_favor": 4.5,
+        "corners_contra": 5.0,
+        "tarjetas": 0.75,
+        "saques_favor": 8.5,
+        "saques_contra": 8.0,
+        "xg_por_tiro": 0.114
+      },
+      "etiquetas": [
+        "sólido atrás",
+        "definición clínica (sobre xG)",
+        "partidos cerrados"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "NOR": {
+      "nombre": "Noruega",
+      "pj": 5,
+      "stats": {
+        "xg_favor": 1.747,
+        "xg_contra": 1.591,
+        "goles_favor": 2.4,
+        "goles_contra": 1.8,
+        "tiros_favor": 10.6,
+        "tiros_contra": 14.6,
+        "corners_favor": 4.4,
+        "corners_contra": 6.0,
+        "tarjetas": 0.4,
+        "saques_favor": 9.4,
+        "saques_contra": 5.2,
+        "xg_por_tiro": 0.165
+      },
+      "etiquetas": [
+        "ofensivo",
+        "frágil atrás",
+        "contragolpeador",
+        "bloque bajo y juego directo",
+        "ocasiones de alta calidad",
+        "definición clínica (sobre xG)",
+        "disciplinado",
+        "partidos abiertos"
+      ],
+      "nota": "Bloque medio-bajo solidario (Solbakken) y contragolpe letal: pocas llegadas pero de altísima calidad hacia Haaland, con Ødegaard entre líneas y mucho movimiento sin balón. Juego directo con saques largos; concede volumen de ocasiones y vive de la eficacia (eliminó a Brasil en octavos).",
+      "fuentes": [
+        "https://tacticalfootballanalysis.com/norway-tactics-fifa-world-cup-2026-tactical-analysis/",
+        "https://tacticalfootballanalysis.com/brazil-norway-world-cup-2026-tactical-analysis-tactics/",
+        "https://mundialanalytics.com/norway-national-team-analysis"
+      ]
+    },
+    "POR": {
+      "nombre": "Portugal",
+      "pj": 5,
+      "stats": {
+        "xg_favor": 1.428,
+        "xg_contra": 0.862,
+        "goles_favor": 1.6,
+        "goles_contra": 0.6,
+        "tiros_favor": 12.4,
+        "tiros_contra": 13.4,
+        "corners_favor": 4.4,
+        "corners_contra": 4.6,
+        "tarjetas": 1.4,
+        "saques_favor": 6.4,
+        "saques_contra": 9.6,
+        "xg_por_tiro": 0.115
+      },
+      "etiquetas": [
+        "sólido atrás",
+        "encierra al rival"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "SCO": {
+      "nombre": "Escocia",
+      "pj": 3,
+      "stats": {
+        "xg_favor": 1.127,
+        "xg_contra": 1.446,
+        "goles_favor": 0.333,
+        "goles_contra": 1.333,
+        "tiros_favor": 9.667,
+        "tiros_contra": 16.0,
+        "corners_favor": 4.0,
+        "corners_contra": 5.333,
+        "tarjetas": 1.667,
+        "saques_favor": 10.333,
+        "saques_contra": 6.0,
+        "xg_por_tiro": 0.117
+      },
+      "etiquetas": [
+        "frágil atrás",
+        "contragolpeador",
+        "bloque bajo y juego directo",
+        "friccionador (tarjetas)"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "SUI": {
+      "nombre": "Suiza",
+      "pj": 5,
+      "stats": {
+        "xg_favor": 1.547,
+        "xg_contra": 0.607,
+        "goles_favor": 1.8,
+        "goles_contra": 0.6,
+        "tiros_favor": 12.4,
+        "tiros_contra": 7.8,
+        "corners_favor": 5.2,
+        "corners_contra": 3.8,
+        "tarjetas": 1.0,
+        "saques_favor": 7.2,
+        "saques_contra": 7.6,
+        "xg_por_tiro": 0.125
+      },
+      "etiquetas": [
+        "ofensivo",
+        "muy sólido atrás"
+      ],
+      "nota": "Bloque compacto y oportunista (Yakin): Xhaka–Freuler cierran el corredor central, dobles marcas al creador rival y contraataques directos con Embolo, Ndoye y Manzambi. Plan declarado contra Argentina: bloque bajo, forzarla a las bandas y golpear a la contra. Necesitó prórroga ante Colombia (0-0 a los 90').",
+      "fuentes": [
+        "https://www.aljazeera.com/news/2026/7/7/switzerland-colombia-world-cup-munoz-embolo-manzambi-prediction-news-start-time",
+        "https://totalfootballanalysis.com/competitions/fifa-world-cup-2026/world-cup-quarter-final-argentina-switzerland-predictions",
+        "https://worldsoccertalk.com/world-cup/argentina-is-vulnerable-switzerlands-murat-yakin-sounds-off-ahead-of-world-cup-quarterfinal/"
+      ]
+    },
+    "SWE": {
+      "nombre": "Suecia",
+      "pj": 4,
+      "stats": {
+        "xg_favor": 0.877,
+        "xg_contra": 1.296,
+        "goles_favor": 1.75,
+        "goles_contra": 2.5,
+        "tiros_favor": 12.0,
+        "tiros_contra": 12.25,
+        "corners_favor": 4.5,
+        "corners_contra": 3.75,
+        "tarjetas": 1.25,
+        "saques_favor": 7.25,
+        "saques_contra": 8.75,
+        "xg_por_tiro": 0.073
+      },
+      "etiquetas": [
+        "conservador en ataque",
+        "mucho tiro de bajo valor",
+        "definición clínica (sobre xG)"
+      ],
+      "nota": null,
+      "fuentes": []
+    },
+    "TUR": {
+      "nombre": "Turquía",
+      "pj": 3,
+      "stats": {
+        "xg_favor": 2.22,
+        "xg_contra": 0.919,
+        "goles_favor": 1.0,
+        "goles_contra": 1.667,
+        "tiros_favor": 23.667,
+        "tiros_contra": 11.333,
+        "corners_favor": 7.333,
+        "corners_contra": 4.667,
+        "tarjetas": 1.0,
+        "saques_favor": 5.0,
+        "saques_contra": 11.333,
+        "xg_por_tiro": 0.094
+      },
+      "etiquetas": [
+        "muy ofensivo",
+        "dominador territorial",
+        "encierra al rival",
+        "partidos abiertos"
+      ],
+      "nota": null,
+      "fuentes": []
+    }
+  }
+}

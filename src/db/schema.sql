@@ -91,6 +91,15 @@ CREATE TABLE IF NOT EXISTS resultados (
     finalizado TEXT
 );
 
+CREATE TABLE IF NOT EXISTS combinadas (
+    id INTEGER PRIMARY KEY,
+    cuota_total REAL NOT NULL,
+    stake REAL NOT NULL,
+    fecha TEXT NOT NULL,
+    resultado TEXT,
+    ganancia REAL
+);
+
 CREATE TABLE IF NOT EXISTS apuestas (
     id INTEGER PRIMARY KEY,
     partido_id INTEGER REFERENCES partidos(id),
@@ -104,7 +113,8 @@ CREATE TABLE IF NOT EXISTS apuestas (
     clv REAL,
     resultado TEXT,
     ganancia REAL,
-    fecha TEXT
+    fecha TEXT,
+    combinada_id INTEGER REFERENCES combinadas(id)
 );
 
 CREATE TABLE IF NOT EXISTS historico (

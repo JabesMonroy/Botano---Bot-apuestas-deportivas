@@ -25,17 +25,14 @@ jobs:
       - name: Instalar dependencias
         run: pip install httpx python-dotenv pandas numpy scipy beautifulsoup4 lxml
 
-      - name: Actualizar datos del Mundial y re-estimar fuerzas
+      - name: Actualizar ligas de club y liquidar apuestas
         env:
           FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY }}
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
-          OPENWEATHER_KEY: ${{ secrets.OPENWEATHER_KEY }}
         run: |
-          python -m scripts.actualizar
-          python -m scripts.ingestar_eventos || echo "ingestar_eventos falló; sigo sin los eventos nuevos"
-          python -m scripts.estimar_fuerzas || echo "estimar_fuerzas falló; sigo con los datos actualizados"
-          python -m scripts.calibrar_sesgo || echo "calibrar_sesgo falló; se mantiene la corrección anterior"
+          python -m scripts.actualizar_ligas
+          python -m scripts.clv || echo "clv falló; se reintenta en la próxima corrida"
 
       - name: Subir la base de datos actualizada
         run: |
@@ -45,6 +42,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "Sin cambios que subir."
           else
-            git commit -m "datos: actualización automática del Mundial"
+            git commit -m "datos: actualización automática de ligas"
             git push
           fi

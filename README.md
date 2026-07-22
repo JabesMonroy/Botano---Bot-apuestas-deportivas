@@ -42,8 +42,12 @@ src/
     bet_builder.py     probabilidad conjunta por correlación
   reporte.py           análisis 1X2 + secundarios + markdown
   apuestas.py          log, Kelly, CLV
+  ui/                  interfaz Streamlit: datos.py (cachés + refresco en vivo), mercados.py
+                        (combinadas), formato.py, componentes.py, paginas/ (una página por vista)
 scripts/               puntos de entrada (ver runbook)
 data/                  bd, caché, referencia/, modelos/, partidos/ (snapshots)
+app.py                  entrada de la interfaz visual (Streamlit)
+bot.py                  entrada del menú de texto
 ```
 
 ## Puesta en marcha
@@ -58,6 +62,12 @@ python -m scripts.validar_apis
 ```
 
 ## Carga inicial (una vez)
+
+`data/bot.db` ya viene en el repositorio, cargada y recalibrada a diario por el workflow de GitHub Actions:
+para clonar y usar no hace falta nada más que "Puesta en marcha" y refrescar partidos/cuotas del día
+(`python -m scripts.actualizar` o el botón "Refrescar datos" de la interfaz).
+
+Solo si necesitas **reconstruir todo desde cero** (equipos, Elo, valores, histórico, modelo entrenado):
 
 ```
 python -m scripts.cargar_mapeo        # 48 selecciones
@@ -74,6 +84,8 @@ python -m scripts.calibrar_tiros      # calibra tiros/xG con el Mundial 2022 (St
 python -m scripts.calibrar_xg_disparo # xG por tiro (logístico, StatsBomb WC22)
 python -m scripts.ingestar_eventos    # eventos reales del Mundial 2026 (wc2026-events)
 ```
+
+O, en un solo paso: `python setup.py`.
 
 ## Uso diario
 

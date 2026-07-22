@@ -1,0 +1,68 @@
+{
+  "actualizado": "2026-07-09",
+  "equipos": {
+    "FRA": {
+      "nota": "Pragmática y adaptativa (Deschamps): bloque medio sólido con Kanté/Tchouaméni de escudo y transiciones verticales rápidas hacia Mbappé (cae al costado izquierdo o baja a recibir) y Dembélé/Barcola. No impone posesión: ajusta el plan partido a partido según el rival.",
+      "fuentes": [
+        "https://tacticalfootballanalysis.com/didier-deschamps-tactics-france-2026-world-cup-tactical-analysis/",
+        "https://fwcumc.com/news/france-playing-style/",
+        "https://worldsoccertalk.com/world-cup/france-2026-world-cup-preview-squad-breakdown-key-player-and-tactical-analysis/"
+      ]
+    },
+    "MAR": {
+      "nota": "Bloque compacto y disciplinado (Ouahbi) con salida limpia bajo presión vía el doble pivote El Aynaoui–Bouaddi; falso nueve (Saibari) y carga del juego por la derecha con Hakimi muy adelantado, lo que deja espacio a su espalda en la transición defensiva. Bounou y la zaga sostienen la invicta mentalidad defensiva desde Qatar 2022.",
+      "fuentes": [
+        "https://www.rotowire.com/soccer/article/france-vs-morocco-preview-predicted-lineups-team-news-tactical-analysis-2026-world-cup-quarterfinal-121621",
+        "https://www.aljazeera.com/sports/2026/7/9/france-morocco-world-cup-quarterfinal-mbappe-saibari-prediction-start-time-lineups",
+        "https://www.moroccoworldnews.com/2026/07/328082/aboucherouane-breaks-down-moroccos-style-ahead-of-france-match/"
+      ]
+    },
+    "ESP": {
+      "nota": "Posesión posicional (De la Fuente): 4-3-3 que muta a 3-2-5 en fase ofensiva, Rodri de ancla y triángulos en el mediocampo; más vertical que el tópico del tiki-taka, ataca temprano por las bandas. Riesgo conocido: línea alta vulnerable al balón a la espalda de los centrales.",
+      "fuentes": [
+        "https://tacticalfootballanalysis.com/luis-de-la-fuente-tactics-spain-2026-world-cup-analysis/",
+        "https://fwcumc.com/news/spain-playing-style/",
+        "https://fwctimes.com/spain-playing-style-world-cup/"
+      ]
+    },
+    "BEL": {
+      "nota": "Posesión con propósito (R. García, 3-4-2-1/4-2-3-1): verticalidad hacia Doku y Lukaku con De Bruyne libre como creador y sin cargas defensivas; presión dirigida que fuerza al lateral rival. Repliega en 5-4-1 y concede llegadas; rota mucho (Doku y KDB fueron suplentes ante USA).",
+      "fuentes": [
+        "https://tacticalfootballanalysis.com/rudi-garcia-tactics-belgium-2026-world-cup-tactical-analysis/",
+        "https://www.sportsmole.co.uk/football/belgium/world-cup-2026/predicted-lineups/de-bruyne-recalled-doku-benched-again-predicted-belgium-lineup-vs-spain_600884.html"
+      ]
+    },
+    "NOR": {
+      "nota": "Bloque medio-bajo solidario (Solbakken) y contragolpe letal: pocas llegadas pero de altísima calidad hacia Haaland, con Ødegaard entre líneas y mucho movimiento sin balón. Juego directo con saques largos; concede volumen de ocasiones y vive de la eficacia (eliminó a Brasil en octavos).",
+      "fuentes": [
+        "https://tacticalfootballanalysis.com/norway-tactics-fifa-world-cup-2026-tactical-analysis/",
+        "https://tacticalfootballanalysis.com/brazil-norway-world-cup-2026-tactical-analysis-tactics/",
+        "https://mundialanalytics.com/norway-national-team-analysis"
+      ]
+    },
+    "ENG": {
+      "nota": "Presión alta y control posicional (Tuchel): dominó la posesión (70% o más en la clasificación), laterales agresivos y balón parado como arma declarada. Crítica recurrente: circulación lateral conservadora en el último tercio; equipo friccionador (lidera tarjetas entre los ocho).",
+      "fuentes": [
+        "https://tacticalfootballanalysis.com/thomas-tuchel-tactics-at-england-2026-building-a-world-cup-ready-system-tactical-analysis/",
+        "https://www.mykhel.com/football/england-world-cup-2026-tactics-what-thomas-tuchel-must-fix-for-the-knockouts-443575.html",
+        "https://tacticalfootballanalysis.com/thomas-tuchel-set-piece-tactics-england-2026-analysis/"
+      ]
+    },
+    "ARG": {
+      "nota": "Flexible (Scaloni: 4-3-3/4-4-2/4-2-3-1): mediocampo técnico (Mac Allister, Enzo, De Paul) que controla el tempo, presión por gatillos —no constante— liderada por Álvarez, y Messi libre entre líneas sin obligaciones defensivas. Muy sólida atrás y clínica en la definición.",
+      "fuentes": [
+        "https://tacticalfootballanalysis.com/lionel-scaloni-tactics-argentina-2026-world-cup-tactical-analysis/",
+        "https://fwctimes.com/argentina-playing-style-world-cup/",
+        "https://fwcumc.com/news/argentina-playing-style/"
+      ]
+    },
+    "SUI": {
+      "nota": "Bloque compacto y oportunista (Yakin): Xhaka–Freuler cierran el corredor central, dobles marcas al creador rival y contraataques directos con Embolo, Ndoye y Manzambi. Plan declarado contra Argentina: bloque bajo, forzarla a las bandas y golpear a la contra. Necesitó prórroga ante Colombia (0-0 a los 90').",
+      "fuentes": [
+        "https://www.aljazeera.com/news/2026/7/7/switzerland-colombia-world-cup-munoz-embolo-manzambi-prediction-news-start-time",
+        "https://totalfootballanalysis.com/competitions/fifa-world-cup-2026/world-cup-quarter-final-argentina-switzerland-predictions",
+        "https://worldsoccertalk.com/world-cup/argentina-is-vulnerable-switzerlands-murat-yakin-sounds-off-ahead-of-world-cup-quarterfinal/"
+      ]
+    }
+  }
+}
