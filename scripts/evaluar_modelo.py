@@ -29,7 +29,7 @@ def main() -> int:
     train, test = filas[:corte], filas[corte:]
     elo_por_api = mapa_elo(conn, cfg.cache_dir)
     ds = construir_dataset(train, elo_por_api, min_partidos=5)
-    params = ajustar(ds[0], ds[1], ds[2], ds[3], ds[4], ds[5], ds[6])
+    params = ajustar(*ds[:8])
 
     n = len(train)
     hw = sum(1 for r in train if r["gh"] > r["ga"])

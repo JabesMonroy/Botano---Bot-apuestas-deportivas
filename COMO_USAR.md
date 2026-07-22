@@ -6,23 +6,24 @@ Guía rápida y directa. No necesitas saber programar: todo se maneja desde un m
 
 ## La forma más fácil (recomendada): doble clic
 
-1. **Una sola vez:** doble clic en **`instalar.bat`** (prepara todo; tarda un par de minutos).
+1. **Una sola vez:** doble clic en **`instalar.bat`** (crea el entorno e instala dependencias; tarda menos de un minuto — la base de datos ya viene cargada con el Mundial 2026, no hace falta descargar nada más).
 2. **Para usarlo**, elige una:
    - **`interfaz.bat`** → abre la **versión visual** en tu navegador (menús desplegables, tablas con color, gráficos). **Recomendada.**
    - **`iniciar.bat`** → abre el **menú de texto** en una ventana, si prefieres algo ligero.
+3. Dentro de la interfaz visual, pulsa **"Refrescar datos"** en la barra lateral para traer los partidos, resultados y cuotas más recientes antes de analizar.
 
 Eso es todo. Si esto te funciona, puedes ignorar el resto del documento.
 
 > La interfaz visual se abre sola en el navegador. Para cerrarla, cierra la ventana negra que se quedó abierta.
 
-> Antes del primer `instalar.bat`, pega tus claves en el archivo `.env` (ver "Paso 1" más abajo, el punto de las claves).
+> Antes del primer `instalar.bat`, pega tus claves en el archivo `.env` (ver "Paso 1" más abajo, el punto de las claves). Sin claves, la app funciona con los datos ya cargados, pero "Refrescar datos" fallará.
 
 ---
 
 ## Alternativa por terminal (si prefieres)
 
-1. **Una sola vez:** preparar el programa (instalar y descargar datos).
-2. **Cada vez que quieras analizar:** ejecutar el menú con `python bot.py`.
+1. **Una sola vez:** crear el entorno e instalar dependencias (ver "Paso 1" más abajo).
+2. **Cada vez que quieras analizar:** ejecutar el menú con `python bot.py` (opción 1 refresca los datos).
 
 ---
 
@@ -55,13 +56,16 @@ FOOTBALL_DATA_KEY=tu_clave
 
 > Dónde sacarlas (gratis): API-Football → dashboard.api-football.com · The Odds API → the-odds-api.com · OpenWeather → openweathermap.org · football-data → football-data.org/client/register
 
-Finalmente, descarga y prepara todos los datos con **un solo comando**:
+Con eso ya está listo: `data/bot.db` viene incluida en el repositorio, cargada y actualizada a diario por
+GitHub Actions. Solo falta refrescar los partidos y cuotas del día, con el botón **"Refrescar datos"** de la
+interfaz o, por terminal:
 
 ```
-python setup.py
+python -m scripts.actualizar
 ```
 
-Esto tarda un par de minutos (descarga selecciones, Elo, valores, histórico y entrena el modelo). Al terminar, ya está listo.
+> Si en algún momento quieres **reconstruir todo desde cero** (equipos, Elo, valores, histórico, modelo
+> entrenado), corre `python setup.py`. Tarda un par de minutos y no es necesario para el uso normal.
 
 ---
 
@@ -80,13 +84,13 @@ Aparece un menú. Escribe el número de lo que quieras y pulsa Enter:
 | **3. Analizar descontando bajas** | Igual que el 2, pero indicando jugadores lesionados/ausentes para ajustar el pronóstico. |
 | **4. Evaluar una combinada** | Le pasas tu combinada y te dice la probabilidad real (teniendo en cuenta la correlación) y si tiene valor. |
 | **5. Ver bajas de un equipo** | Lista los jugadores valiosos que no están en la convocatoria. |
-| **6. Simular el torneo** | Probabilidad de cada selección de clasificar y de ser campeón, comparada con el mercado. |
-| **7. Registrar una apuesta** | Apuntas una apuesta que hiciste en Betano para hacerle seguimiento. |
-| **8. Ver historial y CLV** | Muestra tus apuestas y si batiste la línea de cierre (la señal de que vas bien). |
-| **9. Ver códigos de equipos** | La lista de códigos de 3 letras (ARG, BRA, FRA...) que se usan al escribir los equipos. |
+| **6. Registrar una apuesta** | Apuntas una apuesta que hiciste en Betano para hacerle seguimiento. |
+| **7. Ver historial y CLV** | Muestra tus apuestas y si batiste la línea de cierre (la señal de que vas bien). |
+| **8. Ver códigos de equipos** | La lista de códigos de 3 letras (ARG, BRA, FRA...) que se usan al escribir los equipos. |
+| **9. Ayuda / glosario** | Qué significa cada término (Elo, xG, EV, Over...). |
 | **0. Salir** | Cierra el programa. |
 
-> Los equipos se escriben con su **código de 3 letras** (opción 9 para verlos). Ejemplo: Argentina = `ARG`, Francia = `FRA`.
+> Los equipos se escriben con su **código de 3 letras** (opción 8 para verlos). Ejemplo: Argentina = `ARG`, Francia = `FRA`.
 
 ---
 
@@ -95,8 +99,8 @@ Aparece un menú. Escribe el número de lo que quieras y pulsa Enter:
 1. `python bot.py`
 2. Opción **1** (actualizar datos).
 3. Opción **2**, escribes `ARG` y `AUT` → lees el reporte.
-4. Si decides apostar en Betano, opción **7** para registrarla.
-5. Días después, opción **8** para ver tu CLV.
+4. Si decides apostar en Betano, opción **6** para registrarla.
+5. Días después, opción **7** para ver tu CLV.
 
 ---
 
@@ -104,5 +108,5 @@ Aparece un menú. Escribe el número de lo que quieras y pulsa Enter:
 
 - **No es una bola de cristal.** Es una herramienta de análisis; el fútbol tiene azar.
 - Si el reporte dice **"EV no válido / el modelo diverge del mercado"**, significa que ahí el modelo no es fiable: no apuestes por esa diferencia.
-- La mejor señal de que el sistema te ayuda no es ganar una semana, sino el **CLV positivo** (opción 8) a lo largo del torneo.
+- La mejor señal de que el sistema te ayuda no es ganar una semana, sino el **CLV positivo** (opción 7) a lo largo del torneo.
 - Para entender cómo funciona por dentro: [documentacion.md](documentacion.md).

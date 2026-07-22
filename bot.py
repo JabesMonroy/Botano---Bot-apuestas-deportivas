@@ -61,11 +61,10 @@ MENU = """
   3) Analizar un partido descontando bajas
   4) Evaluar una combinada (bet builder)
   5) Ver bajas / ausencias de un equipo
-  6) Simular el torneo (clasificación y campeón)
-  7) Registrar una apuesta de Betano
-  8) Ver historial y CLV
-  9) Ver códigos de equipos
- 10) Ayuda — qué significa cada término (Elo, xG, EV, Over...)
+  6) Registrar una apuesta de Betano
+  7) Ver historial y CLV
+  8) Ver códigos de equipos
+  9) Ayuda — qué significa cada término (Elo, xG, EV, Over...)
   0) Salir
 ------------------------------------------------------------"""
 
@@ -182,22 +181,18 @@ def _accion(opcion: str, cfg) -> None:
         from scripts.bajas import main as m
         m(_pedir("Equipo (código): ").upper())
     elif opcion == "6":
-        n = _pedir("Iteraciones [10000]: ") or "10000"
-        from scripts.simular_torneo import main as m
-        m(int(n))
-    elif opcion == "7":
         l, v = _pedir("Local (código): ").upper(), _pedir("Visitante (código): ").upper()
         s = _pedir("Tu apuesta (1=local / X=empate / 2=visita): ").upper()
         c = _pedir("Cuota de Betano: ")
         st = _pedir("Stake (enter para sugerencia Kelly): ")
         from scripts.registrar_apuesta import main as m
         m([l, v, s, c] + ([st] if st else []))
-    elif opcion == "8":
+    elif opcion == "7":
         from scripts.clv import main as m
         m()
-    elif opcion == "9":
+    elif opcion == "8":
         ver_equipos(cfg)
-    elif opcion == "10":
+    elif opcion == "9":
         print(GLOSARIO)
     else:
         print("Opción no válida.")

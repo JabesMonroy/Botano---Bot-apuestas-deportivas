@@ -4,7 +4,18 @@ from __future__ import annotations
 def sin_vig(cuotas: dict[str, float]) -> dict[str, float]:
     inv = {k: 1.0 / v for k, v in cuotas.items()}
     s = sum(inv.values())
-    return {k: v / s for k, v in inv.items()}
+    if s <= 1.0 or any(p >= 1.0 for p in inv.values()):
+        return {k: v / s for k, v in inv.items()}
+    lo, hi = 1.0, 5.0
+    for _ in range(60):
+        k = (lo + hi) / 2.0
+        if sum(p**k for p in inv.values()) > 1.0:
+            lo = k
+        else:
+            hi = k
+    pot = {c: p ** ((lo + hi) / 2.0) for c, p in inv.items()}
+    t = sum(pot.values())
+    return {c: p / t for c, p in pot.items()}
 
 
 def ev(prob: float, cuota: float) -> float:

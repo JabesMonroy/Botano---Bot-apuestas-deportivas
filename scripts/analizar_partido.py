@@ -30,8 +30,21 @@ def main(local: str, visita: str) -> int:
     print()
     print(f"  Over 2.5  {a.prob['over25'] * 100:5.1f}%   |  Under 2.5  {a.prob['under25'] * 100:5.1f}%")
     print(f"  BTTS Si   {a.prob['btts_si'] * 100:5.1f}%   |  BTTS No    {a.prob['btts_no'] * 100:5.1f}%")
+    for g, etiquetas in ((a.goles_mercado, ("over", "under")), (a.btts_mercado, ("si", "no"))):
+        if not g:
+            continue
+        sufijo = f" {g['linea']}" if "linea" in g else ""
+        for lado in etiquetas:
+            cu = g["cuotas"][lado]
+            e = f"{g['ev'][lado]:+.3f}" if g["fiable"] else "n/f"
+            print(
+                f"  {(lado + sufijo):10} modelo {g['modelo'][lado] * 100:5.1f}%  pinnacle {g['novig'][lado] * 100:5.1f}%  "
+                f"trabajo {g['trabajo'][lado] * 100:5.1f}%  cuota {cu:5.2f}  EV {e}"
+            )
     if a.corners_esp:
         print(f"  Corners esp. {a.corners_esp:.1f}   |  Tarjetas esp. {a.tarjetas_esp:.1f}" if a.tarjetas_esp else f"  Corners esp. {a.corners_esp:.1f}")
+    if a.saques_local and a.saques_visita:
+        print(f"  Saques de meta esp. {a.saques_local + a.saques_visita:.1f}  ({a.local} {a.saques_local:.1f} - {a.saques_visita:.1f} {a.visita})")
     if a.novig and not a.fiable:
         print(f"\n  AVISO: el modelo diverge {a.divergencia * 100:.0f}pp del mercado sharp -> EV no valido")
     return 0

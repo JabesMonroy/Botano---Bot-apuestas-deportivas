@@ -1,0 +1,102 @@
+{
+  "mu": -0.13476144753836267,
+  "gamma": 0.38287936650744536,
+  "rho": -0.039999999999999813,
+  "equipos": {
+    "Alianza Valledupar": {
+      "ataque": -0.09629196083406157,
+      "defensa": -0.1535476741123502
+    },
+    "America de Cali": {
+      "ataque": 0.19324749377811593,
+      "defensa": 0.16298785438594846
+    },
+    "Atletico Nacional": {
+      "ataque": 0.30466780560596957,
+      "defensa": 0.1839999389688815
+    },
+    "Bucaramanga": {
+      "ataque": 0.04873585485403527,
+      "defensa": 0.21964746859646356
+    },
+    "Chico": {
+      "ataque": -0.13851209544049933,
+      "defensa": -0.3205655579311381
+    },
+    "Cortulua": {
+      "ataque": -0.24426131407786353,
+      "defensa": -0.17983223318735334
+    },
+    "Deportes Tolima": {
+      "ataque": 0.23865933516841695,
+      "defensa": 0.21051593023642814
+    },
+    "Deportivo Cali": {
+      "ataque": -0.025787935304847853,
+      "defensa": -0.1973430740536968
+    },
+    "Deportivo Pasto": {
+      "ataque": -0.039907824314654894,
+      "defensa": 0.11077055727553473
+    },
+    "Deportivo Pereira": {
+      "ataque": 0.10410725740660046,
+      "defensa": -0.0035003912292977356
+    },
+    "Envigado": {
+      "ataque": -0.3542685895718351,
+      "defensa": -0.12497348875529408
+    },
+    "Fortaleza FC": {
+      "ataque": 0.03068444223316596,
+      "defensa": 0.060931047994760984
+    },
+    "Huila": {
+      "ataque": -0.10697694044644519,
+      "defensa": -0.19408734362494579
+    },
+    "Independiente Medellin": {
+      "ataque": 0.206872271721657,
+      "defensa": 0.05601267659757272
+    },
+    "Internacional de Bogota": {
+      "ataque": 0.004492519225861847,
+      "defensa": 0.0038816033430542816
+    },
+    "Jaguares": {
+      "ataque": -0.4582298584364586,
+      "defensa": -0.035977151671656785
+    },
+    "Junior": {
+      "ataque": 0.1679252130341526,
+      "defensa": 0.07473229437006322
+    },
+    "Millonarios": {
+      "ataque": 0.2091162948113423,
+      "defensa": 0.28528000538823406
+    },
+    "Once Caldas": {
+      "ataque": -0.03562107215027492,
+      "defensa": 0.17364976728367493
+    },
+    "Patriotas": {
+      "ataque": -0.1168985539019059,
+      "defensa": -0.21348126722132774
+    },
+    "Santa Fe": {
+      "ataque": 0.1466508989063614,
+      "defensa": 0.1633633339993512
+    },
+    "Union Magdalena": {
+      "ataque": -0.13329674095177957,
+      "defensa": -0.27471130039985453
+    },
+    "Águilas Doradas": {
+      "ataque": 0.09489349868494716,
+      "defensa": -0.007752996253052811
+    }
+  },
+  "n_partidos": 1256,
+  "usar_xg": false,
+  "actualizado": "2026-07-21T15:19:38"
+}

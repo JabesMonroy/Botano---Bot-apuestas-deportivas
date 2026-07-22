@@ -32,7 +32,8 @@ def _asegurar_dependencias() -> None:
 
 
 def main() -> int:
-    print("Instalación inicial de Botano. Esto descarga y prepara todos los datos.\n")
+    print("Reconstrucción completa de Botano desde cero (equipos, Elo, valores, histórico, modelo).")
+    print("Para el uso normal no hace falta: data/bot.db ya viene lista en el repositorio.\n")
     _asegurar_dependencias()
     for i, (desc, modulo) in enumerate(PASOS, 1):
         print(f"[{i}/{len(PASOS)}] {desc}...")

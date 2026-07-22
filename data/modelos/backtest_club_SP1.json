@@ -1,0 +1,20 @@
+{
+  "liga": "SP1",
+  "xg": true,
+  "n": 757,
+  "n_cierre": 565,
+  "rps_modelo": 0.1968,
+  "rps_base": 0.2259,
+  "rps_cierre": 0.1871,
+  "rps_modelo_cc": 0.1934,
+  "brier_ou_modelo": 0.2392,
+  "brier_ou_cierre": 0.2345,
+  "brier_ou_base": 0.2495,
+  "n_ou": 563,
+  "apuestas": {
+    "n": 205,
+    "clv_medio": -0.04720959856092347,
+    "clv_pos": 0.28780487804878047,
+    "roi_plano": -0.15078048780487804
+  }
+}

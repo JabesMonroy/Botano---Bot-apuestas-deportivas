@@ -91,6 +91,15 @@ CREATE TABLE IF NOT EXISTS resultados (
     finalizado TEXT
 );
 
+CREATE TABLE IF NOT EXISTS combinadas (
+    id INTEGER PRIMARY KEY,
+    cuota_total REAL NOT NULL,
+    stake REAL NOT NULL,
+    fecha TEXT NOT NULL,
+    resultado TEXT,
+    ganancia REAL
+);
+
 CREATE TABLE IF NOT EXISTS apuestas (
     id INTEGER PRIMARY KEY,
     partido_id INTEGER REFERENCES partidos(id),
@@ -104,7 +113,8 @@ CREATE TABLE IF NOT EXISTS apuestas (
     clv REAL,
     resultado TEXT,
     ganancia REAL,
-    fecha TEXT
+    fecha TEXT,
+    combinada_id INTEGER REFERENCES combinadas(id)
 );
 
 CREATE TABLE IF NOT EXISTS historico (
@@ -139,6 +149,26 @@ CREATE TABLE IF NOT EXISTS standings (
     actualizado TEXT,
     UNIQUE(grupo, equipo_id)
 );
+
+CREATE TABLE IF NOT EXISTS estadisticas_mundial (
+    id INTEGER PRIMARY KEY,
+    partido_id INTEGER REFERENCES partidos(id),
+    equipo_id INTEGER REFERENCES equipos(id),
+    es_local INTEGER,
+    goles INTEGER,
+    xg REAL,
+    tiros INTEGER,
+    tiros_arco INTEGER,
+    corners INTEGER,
+    amarillas INTEGER,
+    rojas INTEGER,
+    saques_meta INTEGER,
+    fuente TEXT,
+    actualizado TEXT,
+    UNIQUE(partido_id, equipo_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_estadisticas_equipo ON estadisticas_mundial(equipo_id);
 
 CREATE INDEX IF NOT EXISTS idx_cuotas_partido ON cuotas(partido_id);
 CREATE INDEX IF NOT EXISTS idx_predicciones_partido ON predicciones(partido_id);

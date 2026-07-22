@@ -1,0 +1,20 @@
+{
+  "liga": "D1",
+  "xg": true,
+  "n": 476,
+  "n_cierre": 446,
+  "rps_modelo": 0.2038,
+  "rps_base": 0.2339,
+  "rps_cierre": 0.197,
+  "rps_modelo_cc": 0.2033,
+  "brier_ou_modelo": 0.2338,
+  "brier_ou_cierre": 0.2286,
+  "brier_ou_base": 0.2386,
+  "n_ou": 430,
+  "apuestas": {
+    "n": 157,
+    "clv_medio": -0.06547359122842948,
+    "clv_pos": 0.2484076433121019,
+    "roi_plano": -0.1751592356687898
+  }
+}

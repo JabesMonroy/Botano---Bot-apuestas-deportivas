@@ -53,10 +53,10 @@ Así solo tú entras, aunque la URL sea pública.
 
 ## Notas
 
-- **Actualizar datos**: la web usa la `data/bot.db` del repo. Para refrescarla, corre los scripts en tu PC,
-  haz commit de `data/bot.db` y súbelo; Streamlit Cloud redespliega solo.
-- **Ranking de valor**: en la nube el disco es efímero, así que el ranking se vacía si la app se reinicia
-  (tras varios días inactiva). Es lo acordado; lo rehaces pegando capturas.
+- **Actualizar datos**: el botón **Refrescar datos** de la barra lateral trae partidos, resultados y cuotas
+  en vivo (football-data.org, The Odds API) sin redesplegar. Para renovar el resto del modelo (fuerzas,
+  eventos del Mundial), el workflow diario de GitHub Actions ya lo hace y sube `data/bot.db` al repo;
+  Streamlit Cloud redespliega solo.
 - **OCR**: en la nube, si no configuras `OCR_SPACE_API_KEY`, la subida de imagen fallará (winocr solo
   existe en Windows) — pero siempre puedes **pegar el texto** a mano. En tu PC local sigue con winocr sin tocar nada.
 - **Cuota de Google Vision**: 1.000 imágenes/mes gratis. Uso personal no se acerca a ese límite.

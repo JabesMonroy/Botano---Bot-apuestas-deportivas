@@ -1,0 +1,20 @@
+{
+  "liga": "I1",
+  "xg": true,
+  "n": 605,
+  "n_cierre": 573,
+  "rps_modelo": 0.1917,
+  "rps_base": 0.229,
+  "rps_cierre": 0.1873,
+  "rps_modelo_cc": 0.1914,
+  "brier_ou_modelo": 0.2507,
+  "brier_ou_cierre": 0.2452,
+  "brier_ou_base": 0.249,
+  "n_ou": 573,
+  "apuestas": {
+    "n": 247,
+    "clv_medio": -0.042723843961281434,
+    "clv_pos": 0.291497975708502,
+    "roi_plano": -0.1291093117408907
+  }
+}
