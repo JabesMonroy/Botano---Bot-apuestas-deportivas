@@ -18,6 +18,43 @@ def render(cfg: Config) -> None:
     ligas_ordenadas = sorted(ligas, key=lambda l: proximo.get(l["id"], {}).get("dias", 9999))
 
     st.title("Analizar partido")
+
+    prox_todas = datos.proximos_todas_ligas(cfg, dias=5)
+    if prox_todas:
+        with st.expander(f":material/calendar_month: Partidos de los próximos 5 días, todas las competiciones ({len(prox_todas)})", expanded=True):
+            st.caption("Haz clic en uno y se elige la competición y los equipos (horario de Colombia).")
+            por_dia_todas: dict[int, list[dict]] = {}
+            for p in prox_todas:
+                por_dia_todas.setdefault(p["dia"], []).append(p)
+            for dnum in sorted(por_dia_todas):
+                deldia = por_dia_todas[dnum]
+                if dnum == 0:
+                    titulo = "Hoy"
+                elif dnum == 1:
+                    titulo = "Mañana"
+                else:
+                    titulo = f"{deldia[0]['dia_semana'].capitalize()} {deldia[0]['fecha']}"
+                st.markdown(f"**{titulo}**")
+                for p in deldia:
+                    if st.button(
+                        f"{p['hora']} · {p['liga_nombre']} · {p['ln']} vs {p['vn']}",
+                        key=f"pt_{p['liga_id']}_{p['lf']}_{p['vf']}_{dnum}",
+                        width="stretch", icon=":material/schedule:",
+                    ):
+                        liga_dest = next((l for l in ligas if l["id"] == p["liga_id"]), None)
+                        if liga_dest:
+                            equipos_dest = datos.cargar_equipos(cfg, liga_dest["id"])
+                            nl = next((n for n in equipos_dest if equipos_dest[n] == p["lf"]), None)
+                            nv = next((n for n in equipos_dest if equipos_dest[n] == p["vf"]), None)
+                            st.session_state.liga_global = liga_dest["nombre"]
+                            st.session_state.liga_actual = liga_dest["nombre"]
+                            if nl:
+                                st.session_state.sb_local = nl
+                            if nv:
+                                st.session_state.sb_visita = nv
+                            st.session_state.pop("analisis_partido", None)
+                            st.rerun()
+
     liga = selector_liga.selector_competicion(cfg, ligas_ordenadas, proximo, key="liga_global")
     liga_nombre = liga["nombre"]
 

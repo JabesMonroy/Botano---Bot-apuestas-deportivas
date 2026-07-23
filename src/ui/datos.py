@@ -94,6 +94,40 @@ def proximos_partidos(cfg: Config, dias: int = 7, liga_id: int | None = None) ->
 
 
 @st.cache_data(ttl=600, show_spinner=False)
+def proximos_todas_ligas(cfg: Config, dias: int = 5) -> list[dict]:
+    bog = timezone(timedelta(hours=-5))
+    conn = connect(cfg.db_path)
+    filas = conn.execute(
+        "SELECT p.fecha, p.fase, el.fifa_code lf, el.nombre ln, ev.fifa_code vf, ev.nombre vn, "
+        "l.id liga_id, l.codigo liga_codigo, l.nombre liga_nombre, l.emblema_url liga_emblema "
+        "FROM partidos p JOIN equipos el ON p.equipo_local_id=el.id "
+        "JOIN equipos ev ON p.equipo_visita_id=ev.id JOIN ligas l ON p.liga_id=l.id "
+        "WHERE p.estado IN ('TIMED','SCHEDULED') ORDER BY p.fecha"
+    ).fetchall()
+    conn.close()
+    hoy = datetime.now(bog).date()
+    out = []
+    for r in filas:
+        try:
+            dt = datetime.fromisoformat((r["fecha"] or "").replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        loc = dt.astimezone(bog)
+        dia = (loc.date() - hoy).days
+        if not 0 <= dia <= dias:
+            continue
+        out.append({
+            "dia": dia, "fecha": loc.strftime("%d/%m"), "hora": loc.strftime("%H:%M"),
+            "dia_semana": DIAS_SEMANA[loc.weekday()], "fase": r["fase"],
+            "lf": r["lf"], "ln": r["ln"], "vf": r["vf"], "vn": r["vn"],
+            "liga_id": r["liga_id"], "liga_codigo": r["liga_codigo"], "liga_nombre": r["liga_nombre"], "liga_emblema": r["liga_emblema"],
+        })
+    return out
+
+
+@st.cache_data(ttl=600, show_spinner=False)
 def proximo_por_liga(cfg: Config) -> dict:
     bog = timezone(timedelta(hours=-5))
     conn = connect(cfg.db_path)
