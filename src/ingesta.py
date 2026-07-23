@@ -83,6 +83,9 @@ def ingestar_partidos(conn: sqlite3.Connection, fd: FootballData, codigo: int | 
     return len(filas)
 
 
+ESTADOS_TERMINADO = {"FINISHED", "AWARDED"}
+
+
 def ingestar_resultados(conn: sqlite3.Connection, fd: FootballData, codigo: int | str = WORLD_CUP) -> int:
     por_match = {
         r["football_data_id"]: r["id"]
@@ -93,6 +96,8 @@ def ingestar_resultados(conn: sqlite3.Connection, fd: FootballData, codigo: int 
     for m in data.get("matches", []):
         pid = por_match.get(m.get("id"))
         if pid is None:
+            continue
+        if m.get("status") not in ESTADOS_TERMINADO:
             continue
         ft = ((m.get("score") or {}).get("fullTime")) or {}
         gl, gv = ft.get("home"), ft.get("away")

@@ -5,14 +5,15 @@ import json
 import streamlit as st
 
 from src.config import Config
-from src.ligas import POR_CODIGO
+from src.ligas import POR_CODIGO, codigo_para_modelo
 
 
 @st.cache_data(show_spinner=False, ttl=300)
 def evaluar(cfg: Config, liga: dict) -> dict:
     codigo = liga["codigo"]
     cfg_liga = POR_CODIGO.get(codigo)
-    fuerzas_ruta = cfg.data_dir / "modelos" / f"fuerzas_club_{codigo}.json"
+    codigo_modelo = codigo_para_modelo(codigo)
+    fuerzas_ruta = cfg.data_dir / "modelos" / f"fuerzas_club_{codigo_modelo}.json"
     if not fuerzas_ruta.exists():
         return {
             "nivel": "no disponible",
@@ -20,9 +21,11 @@ def evaluar(cfg: Config, liga: dict) -> dict:
         }
     fuerzas = json.loads(fuerzas_ruta.read_text(encoding="utf-8"))
     razones = [f"{fuerzas['n_partidos']} partidos históricos usados para estimar fuerzas de ataque/defensa."]
+    if codigo_modelo != codigo:
+        razones.append(f"Reusa las fuerzas de ataque/defensa de {POR_CODIGO[codigo_modelo].nombre} (mismos clubes, sin histórico propio de este torneo).")
     nivel = "media"
 
-    backtest_ruta = cfg.data_dir / "modelos" / f"backtest_club_{codigo}.json"
+    backtest_ruta = cfg.data_dir / "modelos" / f"backtest_club_{codigo_modelo}.json"
     if backtest_ruta.exists():
         bt = json.loads(backtest_ruta.read_text(encoding="utf-8"))
         gap = bt["rps_modelo_cc"] - bt["rps_cierre"]

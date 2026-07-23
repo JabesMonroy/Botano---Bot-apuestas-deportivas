@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
+from src.ligas import codigo_para_modelo
 from src.modelo import clubes as modelo_clubes
 from src.modelo.dixon_coles import Ajustes, ParametrosModelo, corregir_empate_matriz, lambdas, matriz_marcadores, mercados
 from src.modelo.estilos import cargar as cargar_estilos
@@ -287,6 +288,7 @@ def _stats_club(conn: sqlite3.Connection, liga_codigo: str, nombre: str) -> dict
 
 
 def analizar_club(conn: sqlite3.Connection, data_dir: Path, liga_codigo: str, local: str, visita: str) -> Analisis | None:
+    liga_codigo = codigo_para_modelo(liga_codigo)
     eq = {
         r["fifa_code"]: r
         for r in conn.execute(

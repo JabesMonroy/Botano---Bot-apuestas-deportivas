@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 import sys
+import unicodedata
 from datetime import datetime, timedelta, timezone
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
@@ -11,10 +12,11 @@ from src.clients.api_football import ApiFootball
 from src.config import Config, load_config
 from src.db.database import connect
 from src.imagenes import color_dominante
-from src.ligas import LIGAS
 
 DIAS_ADELANTE = 10
 DIAS_ATRAS = 4
+
+CODIGO_POR_LIGA_API = {239: "CO1", 241: "COP"}
 
 ESTADO = {
     "NS": "SCHEDULED", "TBD": "SCHEDULED",
@@ -37,12 +39,10 @@ def _codigo_unico(conn: sqlite3.Connection, base: str, api_id: int) -> str:
 
 def actualizar(cfg: Config) -> dict:
     conn = connect(cfg.db_path)
-    liga = next(l for l in LIGAS if l.codigo == "CO1")
-    liga_row = conn.execute("SELECT id FROM ligas WHERE codigo=?", (liga.codigo,)).fetchone()
-    if liga_row is None:
+    liga_id = {r["codigo"]: r["id"] for r in conn.execute("SELECT id, codigo FROM ligas WHERE codigo IN ('CO1','COP')")}
+    if "CO1" not in liga_id:
         conn.close()
-        raise RuntimeError("Liga BetPlay no registrada: corre scripts.ingestar_betplay primero")
-    liga_id = liga_row["id"]
+        raise RuntimeError("Liga BetPlay no registrada: corre scripts.ingestar_betplay o scripts.cargar_mapeo_clubes primero")
 
     af = ApiFootball(cfg.api_football_key, cfg.api_football_host, cfg.cache_dir / "api_football")
     fixtures = []
@@ -51,13 +51,16 @@ def actualizar(cfg: Config) -> dict:
         fecha = (hoy + timedelta(days=i)).isoformat()
         ttl = 1800 if i <= 0 else 21600
         data = af.fixtures(date=fecha, timezone="America/Bogota", ttl=ttl)
-        fixtures += [fx for fx in data.get("response", []) if fx["league"]["country"] == "Colombia"]
+        fixtures += [
+            fx for fx in data.get("response", [])
+            if fx["league"]["country"] == "Colombia" and fx["league"]["id"] in CODIGO_POR_LIGA_API
+            and CODIGO_POR_LIGA_API[fx["league"]["id"]] in liga_id
+        ]
     af.close()
 
     ahora = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    equipos_nuevos = {
-        t["id"]: t for fx in fixtures for t in (fx["teams"]["home"], fx["teams"]["away"])
-    }
+    equipos_nuevos = {t["id"]: t for fx in fixtures for t in (fx["teams"]["home"], fx["teams"]["away"])}
+    liga_id_default = liga_id["CO1"]
     for api_id, t in equipos_nuevos.items():
         nombre, logo = t["name"], t.get("logo")
         fila = conn.execute("SELECT id, escudo_url FROM equipos WHERE api_football_id=?", (api_id,)).fetchone()
@@ -65,19 +68,18 @@ def actualizar(cfg: Config) -> dict:
             if fila["escudo_url"] is None and logo:
                 conn.execute("UPDATE equipos SET escudo_url=? WHERE id=?", (logo, fila["id"]))
             continue
-        import unicodedata
         base = unicodedata.normalize("NFKD", nombre).encode("ascii", "ignore").decode().split()[0][:3].upper() or "EQU"
         codigo = _codigo_unico(conn, base, api_id)
         conn.execute(
             "INSERT INTO equipos (fifa_code, nombre, api_football_id, liga_id, odds_api_name, escudo_url, actualizado) "
             "VALUES (?, ?, ?, ?, '', ?, ?)",
-            (codigo, nombre, api_id, liga_id, logo, ahora),
+            (codigo, nombre, api_id, liga_id_default, logo, ahora),
         )
     conn.commit()
 
     pendientes_color = conn.execute(
-        "SELECT id, escudo_url FROM equipos WHERE liga_id=? AND escudo_url IS NOT NULL AND color_principal IS NULL",
-        (liga_id,),
+        "SELECT id, escudo_url FROM equipos WHERE liga_id IN (?, ?) AND escudo_url IS NOT NULL AND color_principal IS NULL",
+        (liga_id.get("CO1"), liga_id.get("COP")),
     ).fetchall()
     for eq in pendientes_color:
         color = color_dominante(eq["escudo_url"])
@@ -89,27 +91,26 @@ def actualizar(cfg: Config) -> dict:
     equipo_id_por_api = {
         r["api_football_id"]: r["id"] for r in conn.execute("SELECT id, api_football_id FROM equipos WHERE api_football_id IS NOT NULL")
     }
-    for api_id in equipos_nuevos:
-        eq_id = equipo_id_por_api.get(api_id)
-        if eq_id:
-            conn.execute("INSERT OR IGNORE INTO equipos_competicion (equipo_id, liga_id) VALUES (?, ?)", (eq_id, liga_id))
-    conn.commit()
-
     n_partidos = n_resultados = 0
     with conn:
         for fx in fixtures:
+            codigo_liga_fx = CODIGO_POR_LIGA_API[fx["league"]["id"]]
+            liga_id_fx = liga_id[codigo_liga_fx]
             local_id = equipo_id_por_api.get(fx["teams"]["home"]["id"])
             visita_id = equipo_id_por_api.get(fx["teams"]["away"]["id"])
             if local_id is None or visita_id is None:
                 continue
+            conn.execute("INSERT OR IGNORE INTO equipos_competicion (equipo_id, liga_id) VALUES (?, ?)", (local_id, liga_id_fx))
+            conn.execute("INSERT OR IGNORE INTO equipos_competicion (equipo_id, liga_id) VALUES (?, ?)", (visita_id, liga_id_fx))
+
             estado_corto = fx["fixture"]["status"]["short"]
             estado = ESTADO.get(estado_corto, "IN_PLAY")
             conn.execute(
                 "INSERT INTO partidos (api_football_id, fecha, equipo_local_id, equipo_visita_id, fase, estado, liga_id, actualizado) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
                 "ON CONFLICT(api_football_id) DO UPDATE SET fecha=excluded.fecha, estado=excluded.estado, "
-                "fase=excluded.fase, actualizado=excluded.actualizado",
-                (fx["fixture"]["id"], fx["fixture"]["date"], local_id, visita_id, fx["league"].get("round"), estado, liga_id, ahora),
+                "fase=excluded.fase, liga_id=excluded.liga_id, actualizado=excluded.actualizado",
+                (fx["fixture"]["id"], fx["fixture"]["date"], local_id, visita_id, fx["league"].get("round"), estado, liga_id_fx, ahora),
             )
             n_partidos += 1
             if estado_corto in ESTADOS_JUGADO and fx["goals"]["home"] is not None:
@@ -127,7 +128,7 @@ def actualizar(cfg: Config) -> dict:
 def main() -> int:
     cfg = load_config()
     r = actualizar(cfg)
-    print(f"Liga BetPlay: {r['partidos']} partidos ({DIAS_ATRAS} días atrás a {DIAS_ADELANTE} adelante, liga + copa) | "
+    print(f"Liga BetPlay + Copa BetPlay: {r['partidos']} partidos ({DIAS_ATRAS} días atrás a {DIAS_ADELANTE} adelante) | "
           f"{r['resultados']} resultados | {r['equipos_nuevos']} equipos nuevos vistos")
     return 0
 

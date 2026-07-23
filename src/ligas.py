@@ -16,6 +16,7 @@ class Liga:
     fd_uk_extra: bool = False
     api_football_id: int | None = None
     fuente_calendario: str | None = None
+    codigo_modelo: str | None = None
 
     def __post_init__(self) -> None:
         if self.fuente_calendario is None and self.fd_org:
@@ -31,10 +32,19 @@ LIGAS = [
     Liga("CL", "Champions League", "Europa", None, None, "soccer_uefa_champs_league", "CL"),
     Liga("BRA", "Brasileirão", "Brasil", "BRA", None, "soccer_brazil_campeonato", "BSA", fd_uk_extra=True),
     Liga("CO1", "Liga BetPlay", "Colombia", None, None, None, None, api_football_id=239, fuente_calendario="API-Football (por fecha)"),
+    Liga(
+        "COP", "Copa BetPlay", "Colombia", None, None, None, None,
+        api_football_id=241, fuente_calendario="API-Football (por fecha)", codigo_modelo="CO1",
+    ),
 ]
 
 POR_CODIGO = {l.codigo: l for l in LIGAS}
 POR_FD_ORG = {l.fd_org: l for l in LIGAS if l.fd_org}
+
+
+def codigo_para_modelo(codigo: str) -> str:
+    liga = POR_CODIGO.get(codigo)
+    return (liga.codigo_modelo if liga else None) or codigo
 
 
 def registrar(conn: sqlite3.Connection) -> dict[str, int]:
