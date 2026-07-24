@@ -19,8 +19,6 @@ _ETIQUETA_MERCADO = {
     "tiros_totales": "Tiros", "tiros_arco_totales": "Tiros al arco", "saques_totales": "Saques de meta",
 }
 
-_OPCIONES_RESULTADO = ["pendiente", "ganada", "perdida"]
-
 
 def _color_ganancia(col):
     estilos = []
@@ -91,21 +89,15 @@ def _guardar_cambios(cfg: Config, original: pd.DataFrame, editado: pd.DataFrame)
         for i in range(len(original)):
             orig, nuevo = original.iloc[i], editado.iloc[i]
             tipo_real, id_real = orig["_tipo_real"], int(orig["_id_real"])
-
-            if tipo_real != "pata" and (not _iguales(orig["Cuota"], nuevo["Cuota"]) or not _iguales(orig["Stake"], nuevo["Stake"])):
+            if tipo_real == "pata":
+                continue
+            if not _iguales(orig["Cuota"], nuevo["Cuota"]) or not _iguales(orig["Stake"], nuevo["Stake"]):
                 nueva_cuota = float(nuevo["Cuota"])
                 nuevo_stake = None if pd.isna(nuevo["Stake"]) else float(nuevo["Stake"])
                 if tipo_real == "sencilla":
                     editar(conn, id_real, nueva_cuota, nuevo_stake)
                 else:
                     editar_combinada(conn, id_real, nueva_cuota, nuevo_stake or 0.0)
-                cambios += 1
-
-            if tipo_real in ("sencilla", "pata") and nuevo["Resultado"] != orig["Resultado"]:
-                if nuevo["Resultado"] == "pendiente":
-                    revertir_resultado(conn, id_real)
-                else:
-                    marcar_resultado(conn, id_real, nuevo["Resultado"] == "ganada")
                 cambios += 1
     finally:
         conn.close()
@@ -149,14 +141,48 @@ def render(cfg: Config) -> None:
         f"ROI {resumen['roi']:+.1f}%" if resumen["roi"] is not None else None,
     )
 
+    pendientes_sencillas = [s for s in sencillas if s["resultado"] is None]
+    pendientes_patas = [p for c in combinadas for p in c["patas"] if p["resultado"] is None]
+    if pendientes_sencillas or pendientes_patas:
+        st.markdown(f"#### {len(pendientes_sencillas) + len(pendientes_patas)} pendiente(s) por marcar")
+        for s in pendientes_sencillas:
+            c1, c2, c3 = st.columns([4, 1, 1])
+            nota = "" if s["mercado"] in MERCADOS_AUTOMATICOS else " · sin dato real, hay que marcarla a mano"
+            c1.markdown(f"**{s['nl']} vs {s['nv']}** — {_etiqueta_mercado(s['mercado'])}: {s['seleccion']} @ {s['cuota_betano']:.2f}{nota}")
+            if c2.button("Ganada", key=f"gano_{s['id']}", icon=":material/check_circle:", width="stretch"):
+                conn = turso.connect(cfg)
+                marcar_resultado(conn, s["id"], True)
+                conn.close()
+                st.rerun()
+            if c3.button("Perdida", key=f"perdio_{s['id']}", icon=":material/cancel:", width="stretch"):
+                conn = turso.connect(cfg)
+                marcar_resultado(conn, s["id"], False)
+                conn.close()
+                st.rerun()
+        for p in pendientes_patas:
+            c1, c2, c3 = st.columns([4, 1, 1])
+            nota = "" if p["mercado"] in MERCADOS_AUTOMATICOS else " · sin dato real, hay que marcarla a mano"
+            c1.markdown(f"**{p['nl']} vs {p['nv']}** — {_etiqueta_mercado(p['mercado'])}: {p['seleccion']} (pata de combinada){nota}")
+            if c2.button("Ganada", key=f"gano_pata_{p['id']}", icon=":material/check_circle:", width="stretch"):
+                conn = turso.connect(cfg)
+                marcar_resultado(conn, p["id"], True)
+                conn.close()
+                st.rerun()
+            if c3.button("Perdida", key=f"perdio_pata_{p['id']}", icon=":material/cancel:", width="stretch"):
+                conn = turso.connect(cfg)
+                marcar_resultado(conn, p["id"], False)
+                conn.close()
+                st.rerun()
+        st.divider()
+
     st.markdown("#### Apuestas")
     filas = _filas_tabla(sencillas, combinadas)
     if not filas:
         st.caption("Todavía no hay apuestas registradas.")
     else:
         st.caption(
-            "Edita Cuota, Stake o Resultado directamente en la tabla y presiona **Guardar cambios**. Las combinadas "
-            "aparecen con sus patas debajo (↳); el resultado de una combinada se calcula solo de sus patas, no se edita ahí."
+            "Edita Cuota o Stake directamente en la tabla y presiona **Guardar cambios**. El resultado se marca "
+            "arriba, en «pendientes por marcar». Las combinadas aparecen con sus patas debajo (↳)."
         )
         df_original = pd.DataFrame(filas)
         editado = st.data_editor(
@@ -168,11 +194,11 @@ def render(cfg: Config) -> None:
                 "Detalle": st.column_config.TextColumn("Detalle", width="large"),
                 "Cuota": st.column_config.NumberColumn("Cuota", min_value=1.01, max_value=10000.0, step=0.01, format="%.2f"),
                 "Stake": st.column_config.NumberColumn("Stake (COP)", min_value=0.0, step=1000.0, format="%.0f"),
-                "Resultado": st.column_config.SelectboxColumn("Resultado", options=_OPCIONES_RESULTADO, required=True),
+                "Resultado": st.column_config.TextColumn("Resultado"),
                 "Ganancia": st.column_config.NumberColumn("Ganancia", format="%.0f"),
                 "Fecha": st.column_config.TextColumn("Fecha"),
             },
-            disabled=["ID", "Tipo", "Detalle", "Ganancia", "Fecha"],
+            disabled=["ID", "Tipo", "Detalle", "Resultado", "Ganancia", "Fecha"],
             hide_index=True,
             width="stretch",
             key="editor_apuestas",
@@ -186,7 +212,24 @@ def render(cfg: Config) -> None:
                 st.toast("Sin cambios para guardar", icon=":material/info:")
 
         raices = [f for f in filas if f["_tipo_real"] != "pata"]
-        with st.expander("Eliminar una apuesta o combinada"):
+        marcadas = [f for f in filas if f["_tipo_real"] in ("sencilla", "pata") and f["Resultado"] != "pendiente"]
+        with st.expander("Corregir o eliminar una apuesta"):
+            a_revertir = st.multiselect(
+                "Marcada por error, volver a pendiente", [f["ID"] for f in marcadas],
+                format_func=lambda k: next(f"{f['ID']} — {f['Detalle']} ({f['Resultado']})" for f in marcadas if f["ID"] == k),
+                key="ids_a_revertir",
+            )
+            if a_revertir and st.button("Revertir a pendiente", icon=":material/undo:"):
+                conn = turso.connect(cfg)
+                try:
+                    for clave in a_revertir:
+                        f = next(x for x in marcadas if x["ID"] == clave)
+                        revertir_resultado(conn, f["_id_real"])
+                finally:
+                    conn.close()
+                st.toast(f"{len(a_revertir)} revertida(s) a pendiente", icon=":material/check_circle:")
+                st.rerun()
+
             a_eliminar = st.multiselect(
                 "Selecciona qué eliminar", [f["ID"] for f in raices],
                 format_func=lambda k: next(f"{f['ID']} — {f['Detalle']}" for f in raices if f["ID"] == k),
