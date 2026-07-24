@@ -4,6 +4,7 @@ import sys
 
 from src.apuestas import registrar
 from src.config import load_config
+from src.db import turso
 from src.db.database import connect
 
 
@@ -16,9 +17,11 @@ def main(argv: list[str]) -> int:
     stake = float(argv[4]) if len(argv) > 4 else None
 
     cfg = load_config()
-    conn = connect(cfg.db_path)
-    r = registrar(conn, cfg.data_dir, local, visita, seleccion, cuota, stake)
-    conn.close()
+    conn_partidos = connect(cfg.db_path)
+    conn_apuestas = turso.connect(cfg)
+    r = registrar(conn_apuestas, conn_partidos, cfg.data_dir, local, visita, seleccion, cuota, stake)
+    conn_partidos.close()
+    conn_apuestas.close()
     if r is None:
         print("no se pudo registrar (codigo, seleccion o partido invalido)")
         return 1

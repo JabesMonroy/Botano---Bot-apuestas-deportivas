@@ -7,7 +7,6 @@ SCHEMA = Path(__file__).parent / "schema.sql"
 
 
 _COLUMNAS_NUEVAS = (
-    ("apuestas", "combinada_id", "INTEGER REFERENCES combinadas(id)"),
     ("equipos", "escudo_url", "TEXT"),
     ("equipos", "color_principal", "TEXT"),
     ("ligas", "emblema_url", "TEXT"),
@@ -16,11 +15,6 @@ _COLUMNAS_NUEVAS = (
 
 def _migrar(conn: sqlite3.Connection) -> None:
     with conn:
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS combinadas ("
-            "id INTEGER PRIMARY KEY, cuota_total REAL NOT NULL, stake REAL NOT NULL, "
-            "fecha TEXT NOT NULL, resultado TEXT, ganancia REAL)"
-        )
         for tabla, columna, tipo in _COLUMNAS_NUEVAS:
             try:
                 conn.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna} {tipo}")

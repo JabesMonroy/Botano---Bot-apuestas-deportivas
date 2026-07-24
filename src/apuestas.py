@@ -4,6 +4,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+from src.db.turso import Conexion
 from src.modelo.liquidacion import MERCADOS_AUTOMATICOS, resultado_mercado
 from src.modelo.valor import ev, kelly, sin_vig
 from src.reporte import analizar_1x2
@@ -13,8 +14,8 @@ def _ahora() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def _partido(conn: sqlite3.Connection, local: str, visita: str):
-    return conn.execute(
+def _partido(conn_partidos: sqlite3.Connection, local: str, visita: str):
+    return conn_partidos.execute(
         "SELECT p.id, el.fifa_code fl, ev.fifa_code fv FROM partidos p "
         "JOIN equipos el ON p.equipo_local_id=el.id JOIN equipos ev ON p.equipo_visita_id=ev.id "
         "WHERE el.fifa_code=? AND ev.fifa_code=?",
@@ -22,129 +23,150 @@ def _partido(conn: sqlite3.Connection, local: str, visita: str):
     ).fetchone()
 
 
-def partido_id(conn: sqlite3.Connection, local: str, visita: str) -> int | None:
-    p = _partido(conn, local, visita)
+def _nombres_partido(conn_partidos: sqlite3.Connection, partido_id: int) -> dict:
+    fila = conn_partidos.execute(
+        "SELECT el.nombre nl, el.fifa_code fl, ev.nombre nv, ev.fifa_code fv FROM partidos p "
+        "JOIN equipos el ON p.equipo_local_id=el.id JOIN equipos ev ON p.equipo_visita_id=ev.id "
+        "WHERE p.id=?",
+        (partido_id,),
+    ).fetchone()
+    return dict(fila) if fila else {}
+
+
+def partido_id(conn_partidos: sqlite3.Connection, local: str, visita: str) -> int | None:
+    p = _partido(conn_partidos, local, visita)
     return p["id"] if p else None
 
 
 def registrar_directo(
-    conn: sqlite3.Connection, partido: int, mercado: str, seleccion: str,
+    conn_apuestas: Conexion, conn_partidos: sqlite3.Connection, partido: int, mercado: str, seleccion: str,
     cuota_betano: float, prob_modelo: float, stake: float | None = None,
 ) -> dict:
     evv = ev(prob_modelo, cuota_betano)
     fk = kelly(prob_modelo, cuota_betano)
     st = stake if stake is not None else round(fk * 100, 2)
-    with conn:
-        conn.execute(
-            "INSERT INTO apuestas (partido_id, mercado, seleccion, cuota_betano, stake, prob_modelo, ev, fecha) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (partido, mercado, seleccion, cuota_betano, st, prob_modelo, evv, _ahora()),
+    n = _nombres_partido(conn_partidos, partido)
+    with conn_apuestas:
+        conn_apuestas.execute(
+            "INSERT INTO apuestas (partido_id, equipo_local_nombre, equipo_visita_nombre, equipo_local_fifa, "
+            "equipo_visita_fifa, mercado, seleccion, cuota_betano, stake, prob_modelo, ev, fecha) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (partido, n.get("nl"), n.get("nv"), n.get("fl"), n.get("fv"),
+             mercado, seleccion, cuota_betano, st, prob_modelo, evv, _ahora()),
         )
     return {"ev": evv, "kelly_pct": round(fk * 100, 2), "stake": st}
 
 
-def registrar_combinada(conn: sqlite3.Connection, patas: list[dict], cuota_total: float, stake: float) -> int:
+def registrar_combinada(
+    conn_apuestas: Conexion, conn_partidos: sqlite3.Connection, patas: list[dict], cuota_total: float, stake: float,
+) -> int:
     fecha = _ahora()
-    with conn:
-        cur = conn.execute(
+    with conn_apuestas:
+        cur = conn_apuestas.execute(
             "INSERT INTO combinadas (cuota_total, stake, fecha) VALUES (?, ?, ?)", (cuota_total, stake, fecha)
         )
         combinada_id = cur.lastrowid
         for p in patas:
-            conn.execute(
-                "INSERT INTO apuestas (partido_id, mercado, seleccion, cuota_betano, prob_modelo, fecha, combinada_id) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (p["partido_id"], p["mercado"], p["seleccion"], p["cuota_betano"], p["prob_modelo"], fecha, combinada_id),
+            n = _nombres_partido(conn_partidos, p["partido_id"])
+            conn_apuestas.execute(
+                "INSERT INTO apuestas (partido_id, equipo_local_nombre, equipo_visita_nombre, equipo_local_fifa, "
+                "equipo_visita_fifa, mercado, seleccion, cuota_betano, prob_modelo, fecha, combinada_id) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (p["partido_id"], n.get("nl"), n.get("nv"), n.get("fl"), n.get("fv"),
+                 p["mercado"], p["seleccion"], p["cuota_betano"], p["prob_modelo"], fecha, combinada_id),
             )
     return combinada_id
 
 
-def pendientes(conn: sqlite3.Connection) -> list[dict]:
-    filas = conn.execute(
-        "SELECT a.id, a.mercado, a.seleccion, a.cuota_betano, a.stake, a.ev, a.fecha, "
-        "el.nombre nl, ev2.nombre nv FROM apuestas a JOIN partidos p ON a.partido_id=p.id "
-        "JOIN equipos el ON p.equipo_local_id=el.id JOIN equipos ev2 ON p.equipo_visita_id=ev2.id "
-        "WHERE a.resultado IS NULL AND a.combinada_id IS NULL ORDER BY a.fecha DESC"
+def pendientes(conn_apuestas: Conexion) -> list[dict]:
+    filas = conn_apuestas.execute(
+        "SELECT id, mercado, seleccion, cuota_betano, stake, ev, fecha, "
+        "equipo_local_nombre nl, equipo_visita_nombre nv FROM apuestas "
+        "WHERE resultado IS NULL AND combinada_id IS NULL ORDER BY fecha DESC"
     ).fetchall()
     return [dict(f) for f in filas]
 
 
-def historial(conn: sqlite3.Connection) -> list[dict]:
-    filas = conn.execute(
-        "SELECT a.id, a.mercado, a.seleccion, a.cuota_betano, a.cuota_cierre, a.stake, a.prob_modelo, "
-        "a.ev, a.clv, a.resultado, a.ganancia, a.fecha, el.nombre nl, ev2.nombre nv FROM apuestas a "
-        "JOIN partidos p ON a.partido_id=p.id JOIN equipos el ON p.equipo_local_id=el.id "
-        "JOIN equipos ev2 ON p.equipo_visita_id=ev2.id "
-        "WHERE a.combinada_id IS NULL ORDER BY a.fecha DESC"
+def historial(conn_apuestas: Conexion) -> list[dict]:
+    filas = conn_apuestas.execute(
+        "SELECT id, mercado, seleccion, cuota_betano, cuota_cierre, stake, prob_modelo, "
+        "ev, clv, resultado, ganancia, fecha, equipo_local_nombre nl, equipo_visita_nombre nv FROM apuestas "
+        "WHERE combinada_id IS NULL ORDER BY fecha DESC"
     ).fetchall()
     return [dict(f) for f in filas]
 
 
-def historial_combinadas(conn: sqlite3.Connection) -> list[dict]:
-    combis = conn.execute("SELECT * FROM combinadas ORDER BY fecha DESC").fetchall()
+def historial_combinadas(conn_apuestas: Conexion) -> list[dict]:
+    combis = conn_apuestas.execute("SELECT * FROM combinadas ORDER BY fecha DESC").fetchall()
     if not combis:
         return []
     patas_por_combinada: dict[int, list[dict]] = {c["id"]: [] for c in combis}
-    for p in conn.execute(
-        "SELECT a.id, a.combinada_id, a.mercado, a.seleccion, a.prob_modelo, a.cuota_betano, a.resultado, "
-        "el.nombre nl, ev2.nombre nv FROM apuestas a JOIN partidos p ON a.partido_id=p.id "
-        "JOIN equipos el ON p.equipo_local_id=el.id JOIN equipos ev2 ON p.equipo_visita_id=ev2.id "
-        "WHERE a.combinada_id IN (SELECT id FROM combinadas)"
-    ):
+    for p in conn_apuestas.execute(
+        "SELECT id, combinada_id, mercado, seleccion, prob_modelo, cuota_betano, resultado, "
+        "equipo_local_nombre nl, equipo_visita_nombre nv FROM apuestas WHERE combinada_id IS NOT NULL"
+    ).fetchall():
         patas_por_combinada.setdefault(p["combinada_id"], []).append(dict(p))
     return [{**dict(c), "patas": patas_por_combinada[c["id"]]} for c in combis]
 
 
-def marcar_resultado(conn: sqlite3.Connection, apuesta_id: int, gano: bool) -> None:
-    fila = conn.execute("SELECT stake, cuota_betano, combinada_id FROM apuestas WHERE id=?", (apuesta_id,)).fetchone()
+def marcar_resultado(conn_apuestas: Conexion, apuesta_id: int, gano: bool) -> None:
+    fila = conn_apuestas.execute("SELECT stake, cuota_betano, combinada_id FROM apuestas WHERE id=?", (apuesta_id,)).fetchone()
     resultado = "ganada" if gano else "perdida"
     ganancia = None
     if fila["combinada_id"] is None and fila["stake"] is not None and fila["cuota_betano"] is not None:
         ganancia = round(fila["stake"] * (fila["cuota_betano"] - 1.0) if gano else -fila["stake"], 2)
-    with conn:
-        conn.execute("UPDATE apuestas SET resultado=?, ganancia=? WHERE id=?", (resultado, ganancia, apuesta_id))
+    with conn_apuestas:
+        conn_apuestas.execute("UPDATE apuestas SET resultado=?, ganancia=? WHERE id=?", (resultado, ganancia, apuesta_id))
     if fila["combinada_id"] is not None:
-        _actualizar_combinadas(conn)
+        _actualizar_combinadas(conn_apuestas)
 
 
-def editar(conn: sqlite3.Connection, apuesta_id: int, cuota_betano: float, stake: float | None) -> None:
-    fila = conn.execute("SELECT prob_modelo, resultado, combinada_id FROM apuestas WHERE id=?", (apuesta_id,)).fetchone()
+def revertir_resultado(conn_apuestas: Conexion, apuesta_id: int) -> None:
+    fila = conn_apuestas.execute("SELECT combinada_id FROM apuestas WHERE id=?", (apuesta_id,)).fetchone()
+    with conn_apuestas:
+        conn_apuestas.execute("UPDATE apuestas SET resultado=NULL, ganancia=NULL WHERE id=?", (apuesta_id,))
+        if fila["combinada_id"] is not None:
+            conn_apuestas.execute("UPDATE combinadas SET resultado=NULL, ganancia=NULL WHERE id=?", (fila["combinada_id"],))
+
+
+def editar(conn_apuestas: Conexion, apuesta_id: int, cuota_betano: float, stake: float | None) -> None:
+    fila = conn_apuestas.execute("SELECT prob_modelo, resultado, combinada_id FROM apuestas WHERE id=?", (apuesta_id,)).fetchone()
     evv = ev(fila["prob_modelo"], cuota_betano) if fila["prob_modelo"] is not None else None
     ganancia = None
     if fila["resultado"] is not None and fila["combinada_id"] is None and stake is not None:
         ganancia = round(stake * (cuota_betano - 1.0) if fila["resultado"] == "ganada" else -stake, 2)
-    with conn:
-        conn.execute(
+    with conn_apuestas:
+        conn_apuestas.execute(
             "UPDATE apuestas SET cuota_betano=?, stake=?, ev=?, ganancia=? WHERE id=?",
             (cuota_betano, stake, evv, ganancia, apuesta_id),
         )
 
 
-def editar_combinada(conn: sqlite3.Connection, combinada_id: int, cuota_total: float, stake: float) -> None:
-    fila = conn.execute("SELECT resultado FROM combinadas WHERE id=?", (combinada_id,)).fetchone()
+def editar_combinada(conn_apuestas: Conexion, combinada_id: int, cuota_total: float, stake: float) -> None:
+    fila = conn_apuestas.execute("SELECT resultado FROM combinadas WHERE id=?", (combinada_id,)).fetchone()
     ganancia = None
     if fila["resultado"] == "ganada":
         ganancia = round(stake * (cuota_total - 1.0), 2)
     elif fila["resultado"] == "perdida":
         ganancia = -stake
-    with conn:
-        conn.execute("UPDATE combinadas SET cuota_total=?, stake=?, ganancia=? WHERE id=?", (cuota_total, stake, ganancia, combinada_id))
+    with conn_apuestas:
+        conn_apuestas.execute("UPDATE combinadas SET cuota_total=?, stake=?, ganancia=? WHERE id=?", (cuota_total, stake, ganancia, combinada_id))
 
 
-def eliminar(conn: sqlite3.Connection, apuesta_id: int) -> None:
-    with conn:
-        conn.execute("DELETE FROM apuestas WHERE id=?", (apuesta_id,))
+def eliminar(conn_apuestas: Conexion, apuesta_id: int) -> None:
+    with conn_apuestas:
+        conn_apuestas.execute("DELETE FROM apuestas WHERE id=?", (apuesta_id,))
 
 
-def eliminar_combinada(conn: sqlite3.Connection, combinada_id: int) -> None:
-    with conn:
-        conn.execute("DELETE FROM apuestas WHERE combinada_id=?", (combinada_id,))
-        conn.execute("DELETE FROM combinadas WHERE id=?", (combinada_id,))
+def eliminar_combinada(conn_apuestas: Conexion, combinada_id: int) -> None:
+    with conn_apuestas:
+        conn_apuestas.execute("DELETE FROM apuestas WHERE combinada_id=?", (combinada_id,))
+        conn_apuestas.execute("DELETE FROM combinadas WHERE id=?", (combinada_id,))
 
 
-def resumen_dict(conn: sqlite3.Connection) -> dict:
-    filas = conn.execute("SELECT clv, ganancia, stake, resultado FROM apuestas WHERE combinada_id IS NULL").fetchall()
-    combis = conn.execute("SELECT ganancia, stake, resultado FROM combinadas").fetchall()
+def resumen_dict(conn_apuestas: Conexion) -> dict:
+    filas = conn_apuestas.execute("SELECT clv, ganancia, stake, resultado FROM apuestas WHERE combinada_id IS NULL").fetchall()
+    combis = conn_apuestas.execute("SELECT ganancia, stake, resultado FROM combinadas").fetchall()
     clvs = [f["clv"] for f in filas if f["clv"] is not None]
     liquidadas = [f["ganancia"] for f in filas if f["ganancia"] is not None] + [c["ganancia"] for c in combis if c["ganancia"] is not None]
     stakes_liquidadas = [f["stake"] for f in filas if f["ganancia"] is not None] + [c["stake"] for c in combis if c["ganancia"] is not None]
@@ -160,9 +182,9 @@ def resumen_dict(conn: sqlite3.Connection) -> dict:
     }
 
 
-def analiticas(conn: sqlite3.Connection) -> dict:
-    filas = conn.execute("SELECT mercado, ev, resultado, ganancia, stake, fecha FROM apuestas WHERE combinada_id IS NULL").fetchall()
-    combis = conn.execute("SELECT resultado, ganancia, stake, fecha FROM combinadas").fetchall()
+def analiticas(conn_apuestas: Conexion) -> dict:
+    filas = conn_apuestas.execute("SELECT mercado, ev, resultado, ganancia, stake, fecha FROM apuestas WHERE combinada_id IS NULL").fetchall()
+    combis = conn_apuestas.execute("SELECT resultado, ganancia, stake, fecha FROM combinadas").fetchall()
 
     liquidadas = [dict(f) for f in filas if f["resultado"] is not None] + [dict(c) for c in combis if c["resultado"] is not None]
     n_ganadas = sum(1 for f in liquidadas if f["resultado"] == "ganada")
@@ -223,11 +245,14 @@ def analiticas(conn: sqlite3.Connection) -> dict:
     }
 
 
-def registrar(conn, data_dir: Path, local: str, visita: str, seleccion: str, cuota_betano: float, stake: float | None) -> dict | None:
+def registrar(
+    conn_apuestas: Conexion, conn_partidos: sqlite3.Connection, data_dir: Path, local: str, visita: str,
+    seleccion: str, cuota_betano: float, stake: float | None,
+) -> dict | None:
     if seleccion not in ("1", "X", "2"):
         return None
-    a = analizar_1x2(conn, data_dir, local, visita)
-    p = _partido(conn, local, visita)
+    a = analizar_1x2(conn_partidos, data_dir, local, visita)
+    p = _partido(conn_partidos, local, visita)
     if a is None or p is None:
         return None
     prob = a.trabajo[seleccion]
@@ -235,45 +260,48 @@ def registrar(conn, data_dir: Path, local: str, visita: str, seleccion: str, cuo
     evv = ev(prob, cuota_betano)
     fk = kelly(prob, cuota_betano)
     st = stake if stake is not None else round(fk * 100, 2)
-    with conn:
-        conn.execute(
-            "INSERT INTO apuestas (partido_id, mercado, seleccion, cuota_betano, stake, prob_modelo, ev, fecha) "
-            "VALUES (?, '1X2', ?, ?, ?, ?, ?, ?)",
-            (p["id"], sel_fifa, cuota_betano, st, prob, evv, _ahora()),
+    n = _nombres_partido(conn_partidos, p["id"])
+    with conn_apuestas:
+        conn_apuestas.execute(
+            "INSERT INTO apuestas (partido_id, equipo_local_nombre, equipo_visita_nombre, equipo_local_fifa, "
+            "equipo_visita_fifa, mercado, seleccion, cuota_betano, stake, prob_modelo, ev, fecha) "
+            "VALUES (?, ?, ?, ?, ?, '1X2', ?, ?, ?, ?, ?, ?)",
+            (p["id"], n.get("nl"), n.get("nv"), n.get("fl"), n.get("fv"),
+             sel_fifa, cuota_betano, st, prob, evv, _ahora()),
         )
     return {"seleccion": sel_fifa, "prob": prob, "ev": evv, "kelly_pct": round(fk * 100, 2), "stake": st, "fiable": a.fiable}
 
 
-def _actualizar_combinadas(conn: sqlite3.Connection) -> int:
+def _actualizar_combinadas(conn_apuestas: Conexion) -> int:
     n = 0
-    combis = conn.execute("SELECT id, cuota_total, stake FROM combinadas WHERE resultado IS NULL").fetchall()
-    with conn:
+    combis = conn_apuestas.execute("SELECT id, cuota_total, stake FROM combinadas WHERE resultado IS NULL").fetchall()
+    with conn_apuestas:
         for c in combis:
-            patas = conn.execute("SELECT resultado FROM apuestas WHERE combinada_id=?", (c["id"],)).fetchall()
+            patas = conn_apuestas.execute("SELECT resultado FROM apuestas WHERE combinada_id=?", (c["id"],)).fetchall()
             if any(p["resultado"] == "perdida" for p in patas):
                 resultado, ganancia = "perdida", -c["stake"]
             elif all(p["resultado"] == "ganada" for p in patas):
                 resultado, ganancia = "ganada", round(c["stake"] * (c["cuota_total"] - 1.0), 2)
             else:
                 continue
-            conn.execute("UPDATE combinadas SET resultado=?, ganancia=? WHERE id=?", (resultado, ganancia, c["id"]))
+            conn_apuestas.execute("UPDATE combinadas SET resultado=?, ganancia=? WHERE id=?", (resultado, ganancia, c["id"]))
             n += 1
     return n
 
 
-def actualizar(conn: sqlite3.Connection) -> int:
-    filas = conn.execute(
+def actualizar(conn_apuestas: Conexion, conn_partidos: sqlite3.Connection) -> int:
+    filas = conn_apuestas.execute(
         "SELECT id, partido_id, mercado, seleccion, cuota_betano, cuota_cierre, clv, stake, combinada_id FROM apuestas "
         "WHERE (cuota_cierre IS NULL AND mercado='1X2') OR resultado IS NULL"
     ).fetchall()
     n = 0
-    with conn:
+    with conn_apuestas:
         for f in filas:
             cierre, clv = f["cuota_cierre"], f["clv"]
             if cierre is None and f["mercado"] == "1X2":
                 cuotas = {
                     r["seleccion"]: r["cuota"]
-                    for r in conn.execute(
+                    for r in conn_partidos.execute(
                         "SELECT seleccion, cuota FROM cuotas WHERE partido_id=? AND casa='pinnacle' AND mercado='1X2'",
                         (f["partido_id"],),
                     )
@@ -284,7 +312,7 @@ def actualizar(conn: sqlite3.Connection) -> int:
 
             resultado = ganancia = None
             if f["mercado"] in MERCADOS_AUTOMATICOS:
-                res = conn.execute(
+                res = conn_partidos.execute(
                     "SELECT goles_local gl, goles_visita gv FROM resultados WHERE partido_id=?", (f["partido_id"],)
                 ).fetchone()
                 if res is not None and res["gl"] is not None and res["gv"] is not None:
@@ -296,20 +324,19 @@ def actualizar(conn: sqlite3.Connection) -> int:
 
             if cierre == f["cuota_cierre"] and resultado is None:
                 continue
-            conn.execute(
+            conn_apuestas.execute(
                 "UPDATE apuestas SET cuota_cierre=?, clv=?, resultado=?, ganancia=? WHERE id=?",
                 (cierre, clv, resultado, ganancia, f["id"]),
             )
             n += 1
-    n += _actualizar_combinadas(conn)
+    n += _actualizar_combinadas(conn_apuestas)
     return n
 
 
-def resumen(conn: sqlite3.Connection) -> None:
-    filas = conn.execute(
-        "SELECT a.*, el.fifa_code fl, ev.fifa_code fv FROM apuestas a "
-        "JOIN partidos p ON a.partido_id=p.id JOIN equipos el ON p.equipo_local_id=el.id "
-        "JOIN equipos ev ON p.equipo_visita_id=ev.id ORDER BY a.fecha"
+def resumen(conn_apuestas: Conexion) -> None:
+    filas = conn_apuestas.execute(
+        "SELECT id, mercado, seleccion, cuota_betano, cuota_cierre, clv, ev, stake, resultado, ganancia, fecha, "
+        "equipo_local_fifa fl, equipo_visita_fifa fv FROM apuestas ORDER BY fecha"
     ).fetchall()
     if not filas:
         print("sin apuestas registradas")

@@ -182,11 +182,14 @@ def tasa_arbitro(cfg: Config, nombre: str) -> dict | None:
 def actualizar_datos(cfg: Config) -> dict:
     from scripts.actualizar_ligas import actualizar_todas
     from src.apuestas import actualizar as actualizar_apuestas
+    from src.db import turso
 
     r = {"ligas": actualizar_todas(cfg)}
-    conn = connect(cfg.db_path)
+    conn_partidos = connect(cfg.db_path)
+    conn_apuestas = turso.connect(cfg)
     try:
-        r["apuestas_liquidadas"] = actualizar_apuestas(conn)
+        r["apuestas_liquidadas"] = actualizar_apuestas(conn_apuestas, conn_partidos)
     finally:
-        conn.close()
+        conn_partidos.close()
+        conn_apuestas.close()
     return r

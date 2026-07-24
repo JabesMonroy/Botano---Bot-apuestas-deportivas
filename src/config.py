@@ -17,6 +17,8 @@ class Config:
     odds_api_key: str
     openweather_key: str
     football_data_key: str
+    turso_database_url: str
+    turso_auth_token: str
     data_dir: Path
     db_path: Path
     cache_dir: Path
@@ -30,6 +32,8 @@ def load_config() -> Config:
         odds_api_key=os.getenv("ODDS_API_KEY", ""),
         openweather_key=os.getenv("OPENWEATHER_KEY", ""),
         football_data_key=os.getenv("FOOTBALL_DATA_KEY", ""),
+        turso_database_url=os.getenv("TURSO_DATABASE_URL", ""),
+        turso_auth_token=os.getenv("TURSO_AUTH_TOKEN", ""),
         data_dir=data_dir,
         db_path=data_dir / "bot.db",
         cache_dir=data_dir / "cache",

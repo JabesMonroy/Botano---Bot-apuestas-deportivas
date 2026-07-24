@@ -4,6 +4,7 @@ import streamlit as st
 
 from src.apuestas import registrar_combinada, registrar_directo, partido_id, resumen_dict
 from src.config import Config
+from src.db import turso
 from src.db.database import connect
 from src.modelo.valor import ev
 
@@ -12,41 +13,45 @@ pagina_mis_apuestas: st.Page | None = None
 
 
 def _registrar_sencillas(cfg: Config, items: list[dict]) -> int:
-    conn = connect(cfg.db_path)
+    conn_partidos = connect(cfg.db_path)
+    conn_apuestas = turso.connect(cfg)
     registrados = 0
     try:
         for item in items:
-            pid = partido_id(conn, item["local"], item["visita"])
+            pid = partido_id(conn_partidos, item["local"], item["visita"])
             if pid is None:
                 continue
-            registrar_directo(conn, pid, item["mercado"], item["seleccion"], item["cuota_betano"], item["prob_modelo"], item.get("stake"))
+            registrar_directo(conn_apuestas, conn_partidos, pid, item["mercado"], item["seleccion"], item["cuota_betano"], item["prob_modelo"], item.get("stake"))
             registrados += 1
     finally:
-        conn.close()
+        conn_partidos.close()
+        conn_apuestas.close()
     return registrados
 
 
 def _registrar_combinada(cfg: Config, items: list[dict], cuota_total: float, stake: float) -> bool:
-    conn = connect(cfg.db_path)
+    conn_partidos = connect(cfg.db_path)
+    conn_apuestas = turso.connect(cfg)
     try:
         patas = []
         for item in items:
-            pid = partido_id(conn, item["local"], item["visita"])
+            pid = partido_id(conn_partidos, item["local"], item["visita"])
             if pid is None:
                 return False
             patas.append({
                 "partido_id": pid, "mercado": item["mercado"], "seleccion": item["seleccion"],
                 "cuota_betano": item["cuota_betano"], "prob_modelo": item["prob_modelo"],
             })
-        registrar_combinada(conn, patas, cuota_total, stake)
+        registrar_combinada(conn_apuestas, conn_partidos, patas, cuota_total, stake)
     finally:
-        conn.close()
+        conn_partidos.close()
+        conn_apuestas.close()
     return True
 
 
 def panel(cfg: Config) -> None:
     cupon = st.session_state.setdefault("cupon", [])
-    conn = connect(cfg.db_path)
+    conn = turso.connect(cfg)
     try:
         resumen = resumen_dict(conn)
     finally:

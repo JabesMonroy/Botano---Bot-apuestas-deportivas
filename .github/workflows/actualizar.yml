@@ -23,13 +23,15 @@ jobs:
           python-version: "3.12"
 
       - name: Instalar dependencias
-        run: pip install httpx python-dotenv pandas numpy scipy beautifulsoup4 lxml
+        run: pip install httpx python-dotenv pandas numpy scipy beautifulsoup4 lxml libsql
 
       - name: Actualizar ligas de club y liquidar apuestas
         env:
           FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY }}
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
         run: |
           python -m scripts.actualizar_ligas
           python -m scripts.clv || echo "clv falló; se reintenta en la próxima corrida"
