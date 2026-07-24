@@ -8,23 +8,15 @@ from src.ingesta import ingestar_cuotas, ingestar_partidos, ingestar_resultados,
 from src.ligas import LIGAS, Liga
 
 
-def actualizar_liga(cfg: Config, liga: Liga, liga_id: int) -> dict:
+def actualizar_liga(cfg: Config, liga: Liga, liga_id: int, fd: FootballData, odds: OddsApi) -> dict:
     conn = connect(cfg.db_path)
-    fd = FootballData(cfg.football_data_key, cfg.cache_dir / "football_data")
-    try:
-        np_ = ingestar_partidos(conn, fd, liga.fd_org, liga_id)
-        nr = ingestar_resultados(conn, fd, liga.fd_org)
-        ns = ingestar_standings(conn, fd, liga.fd_org, grupo_default=liga.codigo)
-    finally:
-        fd.close()
+    np_ = ingestar_partidos(conn, fd, liga.fd_org, liga_id)
+    nr = ingestar_resultados(conn, fd, liga.fd_org)
+    ns = ingestar_standings(conn, fd, liga.fd_org, grupo_default=liga.codigo)
 
     nc = {"1x2": 0, "totals": 0, "btts": 0}
     if liga.odds_api:
-        odds = OddsApi(cfg.odds_api_key, cfg.cache_dir / "odds_api")
-        try:
-            nc = ingestar_cuotas(conn, odds, sport=liga.odds_api)
-        finally:
-            odds.close()
+        nc = ingestar_cuotas(conn, odds, sport=liga.odds_api)
     conn.close()
     return {"partidos": np_, "resultados": nr, "standings": ns, "cuotas": nc}
 
@@ -35,10 +27,16 @@ def actualizar_todas(cfg: Config) -> dict[str, dict]:
     conn.close()
 
     resultado: dict[str, dict] = {}
-    for liga in LIGAS:
-        if liga.codigo not in liga_id or not liga.fd_org:
-            continue
-        resultado[liga.codigo] = actualizar_liga(cfg, liga, liga_id[liga.codigo])
+    fd = FootballData(cfg.football_data_key, cfg.cache_dir / "football_data")
+    odds = OddsApi(cfg.odds_api_key, cfg.cache_dir / "odds_api")
+    try:
+        for liga in LIGAS:
+            if liga.codigo not in liga_id or not liga.fd_org:
+                continue
+            resultado[liga.codigo] = actualizar_liga(cfg, liga, liga_id[liga.codigo], fd, odds)
+    finally:
+        fd.close()
+        odds.close()
 
     if "CO1" in liga_id:
         from scripts.actualizar_betplay import actualizar as actualizar_betplay
