@@ -23,7 +23,7 @@ jobs:
           python-version: "3.12"
 
       - name: Instalar dependencias
-        run: pip install httpx python-dotenv pandas numpy scipy beautifulsoup4 lxml libsql
+        run: pip install -r requirements.txt
 
       - name: Actualizar ligas de club y liquidar apuestas
         env:
